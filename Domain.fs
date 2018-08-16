@@ -19,6 +19,8 @@ open Infrastructure
 // zeige Type Driven: erst später den Event Store implementieren
 
 
+// mehrere Trucks
+
 // Domain
 type Flavour =
   | Vanilla
@@ -28,6 +30,7 @@ type Flavour =
 type Event =
   | IcecreamSold of Flavour
   | Icecream_Restocked of Flavour * int
+  | Flavour_not_in_Stock of Flavour
 
 
 
@@ -90,19 +93,20 @@ let soldIceCreams getEvents =
 // hier dann Program
 let eventStoreReal : EventStore<Event> = eventStore()
 
-eventStoreReal.Append [IcecreamSold Vanilla]
-eventStoreReal.Append [IcecreamSold Strawberry]
-eventStoreReal.Append [IcecreamSold Vanilla]
-eventStoreReal.Append [IcecreamSold Vanilla]
 
 
 let sold = soldIceCreams eventStoreReal.Get
 
 
 // ab hier dann Aktionen
-let sellIceCream flavour =
-  IcecreamSold flavour
+let sellIceCream flavour events =
+  [IcecreamSold flavour]
 
+
+eventStoreReal.Run (sellIceCream Vanilla)
+eventStoreReal.Run (sellIceCream Strawberry)
+eventStoreReal.Run (sellIceCream Vanilla)
+eventStoreReal.Run (sellIceCream Vanilla)
 
 // Frage: wie mit Problemen umgehen
 

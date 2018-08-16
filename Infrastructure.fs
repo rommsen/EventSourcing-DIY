@@ -10,11 +10,16 @@ type Projection<'State,'Event> =
     UpdateState : Projector<'State,'Event>
   }
 
+// Erst mit Append versuchen zeigen?
+
+
+type EventProducer<'Event> =
+  'Event list -> 'Event list
 
 type EventStore<'Event> =
   {
-    Append : 'Event list -> unit
-    Get :  unit -> 'Event list
+    Run : EventProducer<'Event> -> unit
+    Get : unit -> 'Event list
   }
 
 
@@ -23,7 +28,7 @@ type EventStore<'Event> =
 // später: warte aufs Commit
 type Msg<'Event> =
   | Get of AsyncReplyChannel<'Event list>
-  | Append of 'Event list
+  | Run of EventProducer<'Event>
 
 let eventStore () : EventStore<'Event> =
   let events = []
@@ -36,8 +41,8 @@ let eventStore () : EventStore<'Event> =
             let! msg = inbox.Receive()
 
             match msg with
-            | Append newEvents ->
-                return! loop (List.concat [ events ; newEvents ])
+            | Run (producer)  ->
+                return! loop (List.concat [ events ; producer events ])
 
             | Get reply ->
                 reply.Reply events
@@ -47,12 +52,12 @@ let eventStore () : EventStore<'Event> =
       loop events
     )
 
-  let append events =
-    mailbox.Post (Append events)
+  let run producer =
+    mailbox.Post (Run producer)
 
   {
-    Append = append
-    Get = fun () ->  mailbox.PostAndReply(Get)
+    Run = run
+    Get = fun () ->  mailbox.PostAndReply Get
   }
 
 
