@@ -22,17 +22,20 @@ open Infrastructure
 // mehrere Trucks
 
 // Domain
+
+type Truck = System.Guid
+
 type Flavour =
   | Vanilla
   | Strawberry
 
 
+
 type Event =
   | IcecreamSold of Flavour
   | Icecream_Restocked of Flavour * int
-  | Flavour_not_in_Stock of Flavour
-
-
+  | Flavour_empty of Flavour
+  | Flavour_was_not_in_stock of Flavour
 
 
 let updateSoldIcecreams state event =
@@ -45,8 +48,8 @@ let updateSoldIcecreams state event =
 
 let soldIcecreamsProjection : Projection<Flavour list, Event> =
   {
-    InitialState = []
-    UpdateState = updateSoldIcecreams
+    Init = []
+    Update = updateSoldIcecreams
   }
 
 let restock flavour number  stock =
@@ -74,20 +77,30 @@ let updateIcecreamsInStock stock event =
   | Icecream_Restocked (flavour, portions) ->
        stock |> restock flavour portions
 
-let icecreamsInStockProjection : Projection<Map<Flavour, int>, Event> =
+let flavourInStock flavour stock =
+  stock
+  |> Map.tryFind flavour
+  |> Option.defaultValue 0
+
+
+
+let icecreamsInStock : Projection<Map<Flavour, int>, Event> =
   {
-    InitialState = Map.empty
-    UpdateState = updateIcecreamsInStock
+    Init = Map.empty
+    Update = updateIcecreamsInStock
   }
+
+let poject projection events =
+   events |> List.fold projection.Update projection.Init
 
 // brauche irgendwie mehr events und Projektionen
 
 let soldIceCreams getEvents =
-  let events =
-    getEvents()
+  getEvents()
+  |> List.fold soldIcecreamsProjection.Update soldIcecreamsProjection.Init
+  // erstmal so, dann beim 2. zeigen wieder das gleich
+  // eine Project Funktion bauen (baue was du brauchst)
 
-  events
-  |> List.fold soldIcecreamsProjection.UpdateState soldIcecreamsProjection.InitialState
 
 
 // hier dann Program
@@ -95,20 +108,38 @@ let eventStoreReal : EventStore<Event> = eventStore()
 
 
 
-let sold = soldIceCreams eventStoreReal.Get
+// let sold = soldIceCreams eventStoreReal.Get
 
 
-// ab hier dann Aktionen
+// // ab hier dann Aktionen
+// let sellIceCream flavour events =
+//   [IcecreamSold flavour]
+
 let sellIceCream flavour events =
-  [IcecreamSold flavour]
+  let stock =
+    events
+    |> poject icecreamsInStock
+    |> flavourInStock flavour
+
+  match stock with
+  | 0 -> [Flavour_was_not_in_stock flavour]
+  | 1 -> [IcecreamSold flavour ; Flavour_empty flavour]
+  | _ -> [IcecreamSold flavour]
 
 
-eventStoreReal.Run (sellIceCream Vanilla)
-eventStoreReal.Run (sellIceCream Strawberry)
-eventStoreReal.Run (sellIceCream Vanilla)
-eventStoreReal.Run (sellIceCream Vanilla)
+// wenn empty muss neu bestellt werden
+
+let truck = System.Guid.NewGuid()
+
+
+eventStoreReal.Run truck (sellIceCream Vanilla)
+eventStoreReal.Run truck (sellIceCream Strawberry)
+eventStoreReal.Run truck (sellIceCream Vanilla)
+eventStoreReal.Run truck (sellIceCream Vanilla)
 
 // Frage: wie mit Problemen umgehen
+
+// auch Events
 
 // Erweiterung der Domäne
 
@@ -118,7 +149,8 @@ eventStoreReal.Run (sellIceCream Vanilla)
 
 
 
+// erst rein mit append zeigen, dann sagen, hmm das bringt nichts, keine Regeln
+// dann mit Run
 
-
-
-
+// erst mal nur für eins dann mit aggregaten
+// nicht alle events anpassen, deswegen nehmen wir das Aggregate auf
