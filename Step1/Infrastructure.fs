@@ -1,10 +1,7 @@
-namespace Step1.Infrastructure
+module Step1.Infrastructure
 
 type Events<'Event> =
   'Event list
-
-type EventProducer<'Event> =
-  'Event list -> 'Event list
 
 type EventStore<'Event> =
   {

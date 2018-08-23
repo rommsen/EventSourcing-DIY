@@ -1,4 +1,4 @@
-namespace Step1.Domain
+module Step1.Domain
 
 type Flavour =
   | Vanilla

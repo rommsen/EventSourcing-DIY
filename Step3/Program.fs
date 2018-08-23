@@ -1,7 +1,7 @@
-module Step2.Program
+module Step3.Program
 
-open Step2.Domain
-open Step2.Infrastructure
+open Step3.Domain
+open Step3.Infrastructure
 
 let eventStore : EventStore<Event> = EventStore.initialize()
 
@@ -16,10 +16,7 @@ eventStore.Append [IcecreamSold Vanilla]
 
 sold()
 
-eventStore.Append [IcecreamSold Strawberry]
-eventStore.Append [IcecreamSold Vanilla]
+eventStore.Evolve (Behaviour.sellIceCream Strawberry)
+eventStore.Evolve (Behaviour.sellIceCream Vanilla)
 
 sold()
-
-
-

@@ -1,6 +1,6 @@
-module Domain
+module Brainstorm.Domain
 
-open Infrastructure
+open Brainstorm.Infrastructure
 
 
   // 2 Beispiele in der Domäne

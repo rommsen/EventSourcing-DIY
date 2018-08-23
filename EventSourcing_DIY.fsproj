@@ -10,6 +10,15 @@
     <Compile Include="Step2/Infrastructure.fs" />
     <Compile Include="Step2/Domain.fs" />
     <Compile Include="Step2/Program.fs" />
+    <Compile Include="Step3/Infrastructure.fs" />
+    <Compile Include="Step3/Domain.fs" />
+    <Compile Include="Step3/Program.fs" />
+    <Compile Include="Step4/Infrastructure.fs" />
+    <Compile Include="Step4/Domain.fs" />
+    <Compile Include="Step4/Program.fs" />
+    <Compile Include="Step5/Infrastructure.fs" />
+    <Compile Include="Step5/Domain.fs" />
+    <Compile Include="Step5/Program.fs" />
     <Compile Include="Infrastructure.fs" />
     <Compile Include="Domain.fs" />
     <Compile Include="Program.fs" />
