@@ -24,6 +24,7 @@
     <Compile Include="Step6/Program.fs" />
     <Compile Include="Infrastructure.fs" />
     <Compile Include="Domain.fs" />
+    <Compile Include="Menu.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
 </Project>

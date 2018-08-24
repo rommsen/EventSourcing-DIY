@@ -38,47 +38,47 @@ module EventStore =
     let mailbox =
       MailboxProcessor.Start(fun inbox ->
         let rec loop history =
-            async {
-              let! msg = inbox.Receive()
+          async {
+            let! msg = inbox.Receive()
 
-              match msg with
-              | Get reply ->
-                  reply.Reply history
-                  return! loop history
+            match msg with
+            | Get reply ->
+                reply.Reply history
+                return! loop history
 
-              | GetStream (aggregate,reply) ->
+            | GetStream (aggregate,reply) ->
+                history
+                |> Map.tryFind aggregate
+                |> Option.defaultValue []
+                |> reply.Reply
+
+                return! loop history
+
+            | Append (aggregate,events)  ->
+                let stream_history =
                   history
                   |> Map.tryFind aggregate
                   |> Option.defaultValue []
-                  |> reply.Reply
 
-                  return! loop history
-
-              | Append (aggregate,events)  ->
-                  let stream_history =
+                return! loop (
                     history
-                    |> Map.tryFind aggregate
-                    |> Option.defaultValue []
+                    |> Map.add aggregate (stream_history @ events))
 
-                  return! loop (
-                      history
-                      |> Map.add aggregate (stream_history @ events))
+            | Evolve (aggregate,producer) ->
+                let stream_history =
+                  history
+                  |> Map.tryFind aggregate
+                  |> Option.defaultValue []
 
-              | Evolve (aggregate,producer) ->
-                  let stream_history =
+                let events =
+                  stream_history
+                  |> producer
+
+                return! loop (
                     history
-                    |> Map.tryFind aggregate
-                    |> Option.defaultValue []
-
-                  let events =
-                    stream_history
-                    |> producer
-
-                  return! loop (
-                      history
-                      |> Map.add aggregate (stream_history @ events)
-                  )
-            }
+                    |> Map.add aggregate (stream_history @ events)
+                )
+          }
 
         loop history
       )

@@ -1,8 +1,33 @@
-﻿// Learn more about F# at http://fsharp.org
+﻿open System
+open ConsoleMenu
 
-open System
+
+let printSimpleEvents events =
+  events
+  |> List.length
+  |> printfn "History (Length: %i)"
+
+  events
+  |> List.iteri (fun i event -> printfn " %i: %A" (i+1) event)
+
+let step1 =
+  [
+    ("append [IcecreamSold Vanilla]", Step1.Program.appendIcecreamSoldVanilla)
+    ("append [IcecreamSold Strawberry]", Step1.Program.appendIcecreamSoldStrawberry)
+    ("append [IcecreamSoldStrawberry ; Flavour_Empty Strawberry]", Step1.Program.appendIcecreamSoldStrawberryFlavourEmptyStrawberry)
+  ],  Step1.Program.getEvents >> printSimpleEvents
+
 
 [<EntryPoint>]
 let main argv =
-    printfn "Hello World from F#!"
-    0 // return an integer exit code
+
+  let main =
+    [
+      ("Step 1", fun () -> Menu.enterMenuLoop (Step1.Program.mailbox()) "Step1" step1)
+    ], ignore
+
+  main
+  |> Menu.enterMenuLoop () "Event Sourcing DIY"
+  |> ignore
+
+  0

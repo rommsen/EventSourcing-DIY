@@ -35,7 +35,6 @@ module Projections =
       Update = updateSoldIcecreams
     }
 
-
   let restock flavour number  stock =
     stock
     |> Map.tryFind flavour

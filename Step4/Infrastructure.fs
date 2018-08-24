@@ -33,20 +33,20 @@ module EventStore =
     let mailbox =
       MailboxProcessor.Start(fun inbox ->
         let rec loop history =
-            async {
-              let! msg = inbox.Receive()
+          async {
+            let! msg = inbox.Receive()
 
-              match msg with
-              | Get reply ->
-                  reply.Reply history
-                  return! loop history
+            match msg with
+            | Get reply ->
+                reply.Reply history
+                return! loop history
 
-              | Append events  ->
-                  return! loop (history @ events)
+            | Append events  ->
+                return! loop (history @ events)
 
-              | Evolve producer ->
-                  return! loop (history @ producer history)
-            }
+            | Evolve producer ->
+                return! loop (history @ producer history)
+          }
 
         loop history
       )
