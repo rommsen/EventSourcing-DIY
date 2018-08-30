@@ -15,7 +15,7 @@ module EventStore =
     | Get of AsyncReplyChannel<'Event list>
     | Append of Events<'Event>
 
-  let init () : EventStore<'Event> =
+  let initialize () : EventStore<'Event> =
     let history = []
 
     let mailbox =

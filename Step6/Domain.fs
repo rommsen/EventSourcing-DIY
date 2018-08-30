@@ -59,21 +59,21 @@ module Projections =
       Update = updateIcecreamsInStock
     }
 
+  let stockOf flavour stock =
+    stock
+    |> Map.tryFind flavour
+    |> Option.defaultValue 0
+
 
 module Behaviour =
 
   open Projections
 
-  let private numberOfFlavourInStock flavour stock =
-    stock
-    |> Map.tryFind flavour
-    |> Option.defaultValue 0
-
   let sellIceCream flavour events =
     let stock =
       events
       |> project icecreamsInStock
-      |> numberOfFlavourInStock flavour
+      |> stockOf flavour
 
     match stock with
     | 0 -> [Flavour_was_not_in_stock flavour]

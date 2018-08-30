@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ContentModelStore">
+    <e p="C:\src\EventSourcing_DIY" t="IncludeRecursive">
+      <e p="bin" t="ExcludeRecursive" />
+      <e p="Domain.fs" t="Include" />
+      <e p="EventSourcing_DIY.fsproj" t="IncludeRecursive" />
+      <e p="EventSourcing_DIY.sln" t="IncludeFlat" />
+      <e p="Infrastructure.fs" t="Include" />
+      <e p="Menu.fs" t="Include" />
+      <e p="obj" t="ExcludeRecursive" />
+      <e p="packages" t="ExcludeRecursive" />
+      <e p="Program.fs" t="Include" />
+      <e p="Step1" t="Include">
+        <e p="Domain.fs" t="Include" />
+        <e p="Infrastructure.fs" t="Include" />
+        <e p="Program.fs" t="Include" />
+      </e>
+      <e p="Step2" t="Include">
+        <e p="Domain.fs" t="Include" />
+        <e p="Infrastructure.fs" t="Include" />
+        <e p="Program.fs" t="Include" />
+      </e>
+      <e p="Step3" t="Include">
+        <e p="Domain.fs" t="Include" />
+        <e p="Infrastructure.fs" t="Include" />
+        <e p="Program.fs" t="Include" />
+      </e>
+      <e p="Step4" t="Include">
+        <e p="Domain.fs" t="Include" />
+        <e p="Infrastructure.fs" t="Include" />
+        <e p="Program.fs" t="Include" />
+      </e>
+      <e p="Step5" t="Include">
+        <e p="Domain.fs" t="Include" />
+        <e p="Infrastructure.fs" t="Include" />
+        <e p="Program.fs" t="Include" />
+      </e>
+      <e p="Step6" t="Include">
+        <e p="Domain.fs" t="Include" />
+        <e p="Infrastructure.fs" t="Include" />
+        <e p="Program.fs" t="Include" />
+      </e>
+    </e>
+    <e p="C:\Users\RSachse\.Rider2018.1\system\resharper-host\local\Transient\ReSharperHost\v12\SolutionCaches\_EventSourcing_DIY.-1673384849.00" t="ExcludeRecursive" />
+  </component>
+</project>

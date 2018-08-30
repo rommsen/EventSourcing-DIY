@@ -22,9 +22,9 @@
     <Compile Include="Step6/Infrastructure.fs" />
     <Compile Include="Step6/Domain.fs" />
     <Compile Include="Step6/Program.fs" />
-    <Compile Include="Infrastructure.fs" />
-    <Compile Include="Domain.fs" />
-    <Compile Include="Menu.fs" />
+    <Compile Include="Brainstorming/Infrastructure.fs" />
+    <Compile Include="Brainstorming/Domain.fs" />
+    <Compile Include="UI/Menu.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
 </Project>

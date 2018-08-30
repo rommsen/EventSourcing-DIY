@@ -11,7 +11,7 @@ type Msg =
   | GetEvents of AsyncReplyChannel<Event list>
 
 let mailbox () =
-  let eventStore : EventStore<Event> = EventStore.init()
+  let eventStore : EventStore<Event> = EventStore.initialize()
 
   MailboxProcessor.Start(fun inbox ->
     let rec loop eventStore =
@@ -50,4 +50,4 @@ let appendIcecreamSoldStrawberryFlavourEmptyStrawberry (mailbox : MailboxProcess
   mailbox.Post Msg.AppendIcecreamSoldStrawberryFlavourEmptyStrawberry
 
 let getEvents (mailbox : MailboxProcessor<Msg>) =
-  mailbox.PostAndReply(fun reply -> Msg.GetEvents reply)
+  mailbox.PostAndReply Msg.GetEvents

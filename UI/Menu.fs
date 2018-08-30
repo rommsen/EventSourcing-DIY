@@ -1,13 +1,10 @@
-namespace ConsoleMenu
+namespace UI
 
 module Menu =
   open System
 
   let printHeader name =
-    printfn "********************************************************************************"
-    printfn "%35s %s" " " name
-    printfn "********************************************************************************"
-    printfn ""
+    printfn "********** %s **********" name
 
   let printFooter<'actionParam> footerAction (actionParam : 'actionParam)  =
     printfn ""
@@ -24,7 +21,7 @@ module Menu =
         Console.WriteLine (sprintf "%i. %s" (index + 1) name)
         Console.ResetColor())
 
-  let enterMenuLoop<'actionParam> (actionParam : 'actionParam) menu (options,footerAction) =
+  let openMenu<'actionParam> (actionParam : 'actionParam) menu (options,footerAction) =
     Console.CursorVisible <- false
 
     let options =
@@ -33,8 +30,8 @@ module Menu =
     let rec loop selected =
       System.Console.Clear()
       printHeader menu
-      printMenu selected options
       printFooter footerAction actionParam
+      printMenu selected options
 
       let userInput = System.Console.ReadKey()
       match userInput.Key with

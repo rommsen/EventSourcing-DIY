@@ -5,21 +5,61 @@ open Step2.Infrastructure
 
 let eventStore : EventStore<Event> = EventStore.initialize()
 
-let sold () =
-  eventStore.Get()
-  |> List.fold Projections.soldIcecreams.Update Projections.soldIcecreams.Init
+type Msg =
+  | AppendIcecreamSoldVanilla
+  | AppendIcecreamSoldStrawberry
+  | AppendIcecreamSoldStrawberryFlavourEmptyStrawberry
+  | GetEvents of AsyncReplyChannel<Event list>
+  | SoldIcecreams of AsyncReplyChannel<Flavour list>
 
-eventStore.Append [IcecreamSold Vanilla]
-eventStore.Append [IcecreamSold Strawberry ; Flavour_empty Strawberry]
-eventStore.Append [IcecreamSold Vanilla]
-eventStore.Append [IcecreamSold Vanilla]
+let mailbox () =
+  let eventStore : EventStore<Event> = EventStore.initialize()
 
-sold()
+  MailboxProcessor.Start(fun inbox ->
+    let rec loop eventStore =
+      async {
+        let! msg = inbox.Receive()
 
-eventStore.Append [IcecreamSold Strawberry]
-eventStore.Append [IcecreamSold Vanilla]
+        match msg with
+        | AppendIcecreamSoldVanilla ->
+            eventStore.Append [IcecreamSold Vanilla]
+            return! loop eventStore
 
-sold()
+        | AppendIcecreamSoldStrawberry ->
+            eventStore.Append [IcecreamSold Strawberry ]
+            return! loop eventStore
+
+        | AppendIcecreamSoldStrawberryFlavourEmptyStrawberry ->
+            eventStore.Append [IcecreamSold Strawberry ; Flavour_empty Strawberry]
+            return! loop eventStore
+
+        | GetEvents reply ->
+            reply.Reply (eventStore.Get())
+            return! loop eventStore
+
+        | SoldIcecreams reply ->
+            eventStore.Get()
+            |> List.fold Projections.soldIcecreams.Update Projections.soldIcecreams.Init
+            |> reply.Reply
+
+            return! loop eventStore
+      }
+
+    loop eventStore
+  )
 
 
+let appendIcecreamSoldVanilla (mailbox : MailboxProcessor<Msg>) =
+  mailbox.Post Msg.AppendIcecreamSoldVanilla
 
+let appendIcecreamSoldStrawberry (mailbox : MailboxProcessor<Msg>) =
+  mailbox.Post Msg.AppendIcecreamSoldStrawberry
+
+let appendIcecreamSoldStrawberryFlavourEmptyStrawberry (mailbox : MailboxProcessor<Msg>) =
+  mailbox.Post Msg.AppendIcecreamSoldStrawberryFlavourEmptyStrawberry
+
+let getEvents (mailbox : MailboxProcessor<Msg>) =
+  mailbox.PostAndReply Msg.GetEvents
+
+let listOfSoldFlavours (mailbox : MailboxProcessor<Msg>) =
+  mailbox.PostAndReply Msg.SoldIcecreams
