@@ -21,7 +21,7 @@ module Menu =
         Console.WriteLine (sprintf "%i. %s" (index + 1) name)
         Console.ResetColor())
 
-  let openMenu<'actionParam> (actionParam : 'actionParam) menu (options,footerAction) =
+  let initialize<'actionParam> (actionParam : 'actionParam) menu (options,footerAction) =
     Console.CursorVisible <- false
 
     let options =

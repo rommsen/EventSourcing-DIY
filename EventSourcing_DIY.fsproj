@@ -25,6 +25,7 @@
     <Compile Include="Brainstorming/Infrastructure.fs" />
     <Compile Include="Brainstorming/Domain.fs" />
     <Compile Include="UI/Menu.fs" />
+    <Compile Include="UI/Helper.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
 </Project>

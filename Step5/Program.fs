@@ -21,6 +21,8 @@ let mailbox () =
 
         match msg with
         | DemoData ->
+            eventStore.Append [Icecream_Restocked (Vanilla,5)]
+            eventStore.Append [Icecream_Restocked (Strawberry,2)]
             eventStore.Append [IcecreamSold Vanilla]
             eventStore.Append [IcecreamSold Vanilla]
             eventStore.Append [IcecreamSold Strawberry ]
