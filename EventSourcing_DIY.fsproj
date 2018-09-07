@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -20,12 +21,18 @@
     <Compile Include="Step5/Domain.fs" />
     <Compile Include="Step5/Program.fs" />
     <Compile Include="Step6/Infrastructure.fs" />
+    <Compile Include="Step5/Tests.fs" />
     <Compile Include="Step6/Domain.fs" />
     <Compile Include="Step6/Program.fs" />
+    <Compile Include="Step6/Tests.fs" />
+    <Compile Include="Step7/Infrastructure.fs" />
+    <Compile Include="Step7/Domain.fs" />
+    <Compile Include="Step7/Program.fs" />
     <Compile Include="Brainstorming/Infrastructure.fs" />
     <Compile Include="Brainstorming/Domain.fs" />
     <Compile Include="UI/Menu.fs" />
     <Compile Include="UI/Helper.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
+  <Import Project=".paket\Paket.Restore.targets" />
 </Project>

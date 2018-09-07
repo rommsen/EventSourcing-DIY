@@ -1,10 +1,7 @@
 module Step6.Infrastructure
 
-
-type Aggregate = System.Guid
-
 type Events<'Event> =
-  Map<Aggregate,'Event list>
+  'Event list
 
 type EventProducer<'Event> =
   'Event list -> 'Event list
@@ -12,9 +9,8 @@ type EventProducer<'Event> =
 type EventStore<'Event> =
   {
     Get : unit -> Events<'Event>
-    GetStream : Aggregate -> 'Event list
-    Append : Aggregate -> 'Event list -> unit
-    Evolve : Aggregate -> EventProducer<'Event> -> unit
+    Append : Events<'Event> -> unit
+    Evolve : EventProducer<'Event> -> unit
   }
 
 type Projection<'State,'Event> =
@@ -27,13 +23,12 @@ type Projection<'State,'Event> =
 module EventStore =
 
   type Msg<'Event> =
-    | Get of AsyncReplyChannel<Events<'Event>>
-    | GetStream of Aggregate * AsyncReplyChannel<'Event list>
-    | Append of  Aggregate * 'Event list
-    | Evolve of Aggregate * EventProducer<'Event>
+    | Get of AsyncReplyChannel<'Event list>
+    | Append of Events<'Event>
+    | Evolve of EventProducer<'Event>
 
   let initialize () : EventStore<'Event> =
-    let history : Map<Aggregate,'Event> = Map.empty
+    let history = []
 
     let mailbox =
       MailboxProcessor.Start(fun inbox ->
@@ -46,59 +41,28 @@ module EventStore =
                 reply.Reply history
                 return! loop history
 
-            | GetStream (aggregate,reply) ->
-                history
-                |> Map.tryFind aggregate
-                |> Option.defaultValue []
-                |> reply.Reply
+            | Append events  ->
+                return! loop (history @ events)
 
-                return! loop history
-
-            | Append (aggregate,events)  ->
-                let stream_history =
-                  history
-                  |> Map.tryFind aggregate
-                  |> Option.defaultValue []
-
-                return! loop (
-                    history
-                    |> Map.add aggregate (stream_history @ events))
-
-            | Evolve (aggregate,producer) ->
-                let stream_history =
-                  history
-                  |> Map.tryFind aggregate
-                  |> Option.defaultValue []
-
-                let events =
-                  stream_history
-                  |> producer
-
-                return! loop (
-                    history
-                    |> Map.add aggregate (stream_history @ events)
-                )
+            | Evolve producer ->
+                return! loop (history @ producer history)
           }
 
         loop history
       )
 
-    let getStream aggregate =
-      mailbox.PostAndReply (fun reply -> (aggregate,reply) |> GetStream)
-
-    let append aggregate events =
-      (aggregate,events)
+    let append events =
+      events
       |> Append
       |> mailbox.Post
 
-    let evolve aggregate producer =
-      (aggregate,producer)
+    let evolve producer =
+      producer
       |> Evolve
       |> mailbox.Post
 
     {
       Get = fun () ->  mailbox.PostAndReply Get
-      GetStream = getStream
       Append = append
       Evolve = evolve
     }

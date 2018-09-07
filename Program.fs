@@ -1,19 +1,21 @@
 ﻿open UI
 open UI.Helper
 open System
+open Expecto
+
 
 let step1 =
   [
-    ("append [IcecreamSold Vanilla]", Step1.Program.appendIcecreamSoldVanilla)
-    ("append [IcecreamSold Strawberry]", Step1.Program.appendIcecreamSoldStrawberry)
-    ("append [IcecreamSoldStrawberry ; Flavour_Empty Strawberry]", Step1.Program.appendIcecreamSoldStrawberryFlavourEmptyStrawberry)
+    ("append [Flavour_sold Vanilla]", Step1.Program.appendFlavour_soldVanilla)
+    ("append [Flavour_sold Strawberry]", Step1.Program.appendFlavour_soldStrawberry)
+    ("append [Flavour_soldStrawberry ; Flavour_Empty Strawberry]", Step1.Program.appendFlavour_soldStrawberryFlavourEmptyStrawberry)
   ],  Step1.Program.getEvents >> printEvents
 
 let step2 =
   [
-    ("append [IcecreamSold Vanilla]", Step2.Program.appendIcecreamSoldVanilla)
-    ("append [IcecreamSold Strawberry]", Step2.Program.appendIcecreamSoldStrawberry)
-    ("append [IcecreamSoldStrawberry ; Flavour_Empty Strawberry]", Step2.Program.appendIcecreamSoldStrawberryFlavourEmptyStrawberry)
+    ("append [Flavour_sold Vanilla]", Step2.Program.appendFlavour_soldVanilla)
+    ("append [Flavour_sold Strawberry]", Step2.Program.appendFlavour_soldStrawberry)
+    ("append [Flavour_soldStrawberry ; Flavour_Empty Strawberry]", Step2.Program.appendFlavour_soldStrawberryFlavourEmptyStrawberry)
     ("list of sold flavours", Step2.Program.listOfSoldFlavours >> printUlWithHeader "List of sold Flavours" >> waitForAnyKey)
   ],  Step2.Program.getEvents >> printEvents
 
@@ -41,31 +43,43 @@ let step5 =
     ("Restock Vanilla with 5 portions", Step5.Program.restock Step5.Domain.Vanilla 5)
     ("Restock Strawberry with 5 portions", Step5.Program.restock Step5.Domain.Strawberry 5)
     ("Stock of Vanilla", Step5.Program.stockOf Step5.Domain.Vanilla >> printfn "\nStock of Vanilla: %i\n" >> waitForAnyKey)
-    ("Stock of Strawberry", Step5.Program.stockOf Step5.Domain.Strawberry >> printfn "\Stock of Strawberry: %i\n" >> waitForAnyKey)
+    ("Stock of Strawberry", Step5.Program.stockOf Step5.Domain.Strawberry >> printfn "\nStock of Strawberry: %i\n" >> waitForAnyKey)
+    ("Run Tests", fun _ -> runTests defaultConfig Step5.Tests.tests |> ignore ; waitForAnyKey())
   ],  Step5.Program.getEvents >> printEvents
-
-let step6b truck =
-  [
-    ("SellIcecream Vanilla", Step6.Program.sellIcecream truck Step6.Domain.Vanilla)
-    ("SellIcecream Strawberry", Step6.Program.sellIcecream truck Step6.Domain.Strawberry)
-    ("Restock Vanilla with 5 portions", Step6.Program.restock truck Step6.Domain.Vanilla 5)
-    ("Restock Strawberry with 5 portions", Step6.Program.restock truck Step6.Domain.Strawberry 5)
-    ("Stock of Vanilla", Step6.Program.stockOf truck Step6.Domain.Vanilla >> printfn "\Stock of Vanilla: %i\n" >> waitForAnyKey)
-    ("Stock of Strawberry", Step6.Program.stockOf truck Step6.Domain.Strawberry >> printfn "\Stock of Strawberry: %i\n" >> waitForAnyKey)
-  ],  Step6.Program.getEventStream truck >> printEvents
-
 
 let step6 =
   [
-     ("Demo Data", Step6.Program.demoData)
-     ("Truck1", fun mailbox -> Menu.initialize mailbox "Step6 - Truck1" (step6b Step6.Program.truck1))
-     ("Truck2", fun mailbox -> Menu.initialize mailbox "Step6 - Truck2" (step6b Step6.Program.truck2))
-  ],  Step6.Program.getEvents >> printEventsPerAggregate
+    ("Demo Data", Step6.Program.demoData)
+    ("SellIcecream Vanilla", Step6.Program.sellIcecream Step6.Domain.Vanilla)
+    ("SellIcecream Strawberry", Step6.Program.sellIcecream Step6.Domain.Strawberry)
+    ("Restock Vanilla with 5 portions", Step6.Program.restock Step6.Domain.Vanilla 5)
+    ("Restock Strawberry with 5 portions", Step6.Program.restock Step6.Domain.Strawberry 5)
+    ("Stock of Vanilla", Step6.Program.stockOf Step6.Domain.Vanilla >> printfn "\nStock of Vanilla: %i\n" >> waitForAnyKey)
+    ("Stock of Strawberry", Step6.Program.stockOf Step6.Domain.Strawberry >> printfn "\nStock of Strawberry: %i\n" >> waitForAnyKey)
+    ("Run Tests", fun _ -> runTests defaultConfig Step6.Tests.tests |> ignore ; waitForAnyKey())
+  ],  Step6.Program.getEvents >> printEvents
+
+let step7b truck =
+  [
+    ("SellIcecream Vanilla", Step7.Program.sellIcecream truck Step7.Domain.Vanilla)
+    ("SellIcecream Strawberry", Step7.Program.sellIcecream truck Step7.Domain.Strawberry)
+    ("Restock Vanilla with 5 portions", Step7.Program.restock truck Step7.Domain.Vanilla 5)
+    ("Restock Strawberry with 5 portions", Step7.Program.restock truck Step7.Domain.Strawberry 5)
+    ("Stock of Vanilla", Step7.Program.stockOf truck Step7.Domain.Vanilla >> printfn "\nStock of Vanilla: %i\n" >> waitForAnyKey)
+    ("Stock of Strawberry", Step7.Program.stockOf truck Step7.Domain.Strawberry >> printfn "\nStock of Strawberry: %i\n" >> waitForAnyKey)
+  ],  Step7.Program.getEventStream truck >> printEvents
+
+
+let step7 =
+  [
+     ("Demo Data", Step7.Program.demoData)
+     ("Truck1", fun mailbox -> Menu.initialize mailbox "Step7 - Truck1" (step7b Step7.Program.truck1))
+     ("Truck2", fun mailbox -> Menu.initialize mailbox "Step7 - Truck2" (step7b Step7.Program.truck2))
+  ],  Step7.Program.getEvents >> printEventsPerAggregate
 
 
 [<EntryPoint>]
 let main _ =
-
   let main =
     [
       ("Step 1", fun () -> Menu.initialize (Step1.Program.mailbox()) "Step1" step1)
@@ -74,6 +88,7 @@ let main _ =
       ("Step 4", fun () -> Menu.initialize (Step4.Program.mailbox()) "Step4" step4)
       ("Step 5", fun () -> Menu.initialize (Step5.Program.mailbox()) "Step5" step5)
       ("Step 6", fun () -> Menu.initialize (Step6.Program.mailbox()) "Step6" step6)
+      ("Step 7", fun () -> Menu.initialize (Step7.Program.mailbox()) "Step7" step7)
     ], ignore
 
   main

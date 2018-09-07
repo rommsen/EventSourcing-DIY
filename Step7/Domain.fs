@@ -1,5 +1,7 @@
-module Step6.Domain
+module Step7.Domain
 
+
+type Truck = System.Guid
 
 type Flavour =
   | Vanilla
@@ -14,7 +16,7 @@ type Event =
 
 module Projections =
 
-  open Step6.Infrastructure
+  open Step7.Infrastructure
 
   let project projection events =
     events |> List.fold projection.Update projection.Init
@@ -32,7 +34,6 @@ module Projections =
       Init = []
       Update = updateSoldIcecreams
     }
-
 
   let restock flavour number stock =
     stock

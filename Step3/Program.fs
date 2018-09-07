@@ -19,10 +19,10 @@ let mailbox () =
 
         match msg with
         | DemoData ->
-            eventStore.Append [IcecreamSold Vanilla]
-            eventStore.Append [IcecreamSold Vanilla]
-            eventStore.Append [IcecreamSold Strawberry ]
-            eventStore.Append [IcecreamSold Strawberry]
+            eventStore.Append [Flavour_sold Vanilla]
+            eventStore.Append [Flavour_sold Vanilla]
+            eventStore.Append [Flavour_sold Strawberry ]
+            eventStore.Append [Flavour_sold Strawberry]
             return! loop eventStore
 
         | SellIcecream flavour ->

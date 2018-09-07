@@ -30,7 +30,7 @@ type Flavour =
   | Strawberry
 
 type Event =
-  | IcecreamSold of Flavour
+  | Flavour_sold of Flavour
   | Icecream_Restocked of Flavour * int
   | Flavour_empty of Flavour
   | Flavour_was_not_in_stock of Flavour
@@ -38,7 +38,7 @@ type Event =
 
 let updateSoldIcecreams state event =
   match event with
-  | IcecreamSold flavour ->
+  | Flavour_sold flavour ->
       flavour :: state
 
   | _ ->
@@ -58,7 +58,7 @@ let restock flavour number  stock =
 
 let updateIcecreamsInStock stock event =
   match event with
-  // | IcecreamSold flavour ->
+  // | Flavour_sold flavour ->
   //     stock
   //     |> Map.tryFind flavour
   //     |> Option.map (fun portions -> stock |> Map.add flavour (portions - 1))
@@ -69,7 +69,7 @@ let updateIcecreamsInStock stock event =
   //     |> Map.tryFind flavour
   //     |> Option.map (fun portions -> stock |> Map.add flavour (portions + portions))
   //     |> Option.defaultValue stock
-  | IcecreamSold flavour ->
+  | Flavour_sold flavour ->
       stock |> restock flavour -1
 
   | Icecream_Restocked (flavour, portions) ->
@@ -108,7 +108,7 @@ let eventStore : EventStore<Event> = initializeEventStore()
 
 // // ab hier dann Aktionen
 // let sellIceCream flavour events =
-//   [IcecreamSold flavour]
+//   [Flavour_sold flavour]
 
 
 let numberOfFlavourInStock flavour stock =
@@ -124,8 +124,8 @@ let sellIceCream flavour events =
 
   match stock with
   | 0 -> [Flavour_was_not_in_stock flavour]
-  | 1 -> [IcecreamSold flavour ; Flavour_empty flavour]
-  | _ -> [IcecreamSold flavour]
+  | 1 -> [Flavour_sold flavour ; Flavour_empty flavour]
+  | _ -> [Flavour_sold flavour]
 
 
 // wenn empty muss neu bestellt werden

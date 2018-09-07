@@ -23,10 +23,10 @@ let mailbox () =
         | DemoData ->
             eventStore.Append [Icecream_Restocked (Vanilla,5)]
             eventStore.Append [Icecream_Restocked (Strawberry,2)]
-            eventStore.Append [IcecreamSold Vanilla]
-            eventStore.Append [IcecreamSold Vanilla]
-            eventStore.Append [IcecreamSold Strawberry ]
-            eventStore.Append [IcecreamSold Strawberry ; Flavour_empty Strawberry]
+            eventStore.Append [Flavour_sold Vanilla]
+            eventStore.Append [Flavour_sold Vanilla]
+            eventStore.Append [Flavour_sold Strawberry ]
+            eventStore.Append [Flavour_sold Strawberry ; Flavour_empty Strawberry]
             return! loop eventStore
 
         | SellIcecream flavour ->

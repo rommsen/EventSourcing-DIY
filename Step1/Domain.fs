@@ -5,7 +5,7 @@ type Flavour =
   | Strawberry
 
 type Event =
-  | IcecreamSold of Flavour
+  | Flavour_sold of Flavour
   | Icecream_Restocked of Flavour * int
   | Flavour_empty of Flavour
   | Flavour_was_not_in_stock of Flavour

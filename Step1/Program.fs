@@ -5,9 +5,9 @@ open Step1.Infrastructure
 
 
 type Msg =
-  | AppendIcecreamSoldVanilla
-  | AppendIcecreamSoldStrawberry
-  | AppendIcecreamSoldStrawberryFlavourEmptyStrawberry
+  | AppendFlavour_soldVanilla
+  | AppendFlavour_soldStrawberry
+  | AppendFlavour_soldStrawberryFlavourEmptyStrawberry
   | GetEvents of AsyncReplyChannel<Event list>
 
 let mailbox () =
@@ -19,16 +19,16 @@ let mailbox () =
         let! msg = inbox.Receive()
 
         match msg with
-        | AppendIcecreamSoldVanilla ->
-            eventStore.Append [IcecreamSold Vanilla]
+        | AppendFlavour_soldVanilla ->
+            eventStore.Append [Flavour_sold Vanilla]
             return! loop eventStore
 
-        | AppendIcecreamSoldStrawberry ->
-            eventStore.Append [IcecreamSold Strawberry ]
+        | AppendFlavour_soldStrawberry ->
+            eventStore.Append [Flavour_sold Strawberry ]
             return! loop eventStore
 
-        | AppendIcecreamSoldStrawberryFlavourEmptyStrawberry ->
-            eventStore.Append [IcecreamSold Strawberry ; Flavour_empty Strawberry]
+        | AppendFlavour_soldStrawberryFlavourEmptyStrawberry ->
+            eventStore.Append [Flavour_sold Strawberry ; Flavour_empty Strawberry]
             return! loop eventStore
 
         | GetEvents reply ->
@@ -40,14 +40,14 @@ let mailbox () =
   )
 
 
-let appendIcecreamSoldVanilla (mailbox : MailboxProcessor<Msg>) =
-  mailbox.Post Msg.AppendIcecreamSoldVanilla
+let appendFlavour_soldVanilla (mailbox : MailboxProcessor<Msg>) =
+  mailbox.Post Msg.AppendFlavour_soldVanilla
 
-let appendIcecreamSoldStrawberry (mailbox : MailboxProcessor<Msg>) =
-  mailbox.Post Msg.AppendIcecreamSoldStrawberry
+let appendFlavour_soldStrawberry (mailbox : MailboxProcessor<Msg>) =
+  mailbox.Post Msg.AppendFlavour_soldStrawberry
 
-let appendIcecreamSoldStrawberryFlavourEmptyStrawberry (mailbox : MailboxProcessor<Msg>) =
-  mailbox.Post Msg.AppendIcecreamSoldStrawberryFlavourEmptyStrawberry
+let appendFlavour_soldStrawberryFlavourEmptyStrawberry (mailbox : MailboxProcessor<Msg>) =
+  mailbox.Post Msg.AppendFlavour_soldStrawberryFlavourEmptyStrawberry
 
 let getEvents (mailbox : MailboxProcessor<Msg>) =
   mailbox.PostAndReply Msg.GetEvents

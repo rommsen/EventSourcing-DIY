@@ -5,7 +5,7 @@ type Flavour =
   | Strawberry
 
 type Event =
-  | IcecreamSold of Flavour
+  | Flavour_sold of Flavour
   | Icecream_Restocked of Flavour * int
   | Flavour_empty of Flavour
   | Flavour_was_not_in_stock of Flavour
@@ -17,7 +17,7 @@ module Projections =
 
   let private updateSoldIcecreams state event =
     match event with
-    | IcecreamSold flavour ->
+    | Flavour_sold flavour ->
         flavour :: state
 
     | _ ->
