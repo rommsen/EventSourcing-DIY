@@ -31,7 +31,7 @@ type Flavour =
 
 type Event =
   | Flavour_sold of Flavour
-  | Icecream_Restocked of Flavour * int
+  | Flavour_restocked of Flavour * int
   | Flavour_empty of Flavour
   | Flavour_was_not_in_stock of Flavour
 
@@ -64,7 +64,7 @@ let updateIcecreamsInStock stock event =
   //     |> Option.map (fun portions -> stock |> Map.add flavour (portions - 1))
   //     |> Option.defaultValue stock
 
-  // | Icecream_Restocked (flavour, portions) ->
+  // | Flavour_restocked (flavour, portions) ->
   //     stock
   //     |> Map.tryFind flavour
   //     |> Option.map (fun portions -> stock |> Map.add flavour (portions + portions))
@@ -72,7 +72,7 @@ let updateIcecreamsInStock stock event =
   | Flavour_sold flavour ->
       stock |> restock flavour -1
 
-  | Icecream_Restocked (flavour, portions) ->
+  | Flavour_restocked (flavour, portions) ->
       stock |> restock flavour portions
 
   | _ ->

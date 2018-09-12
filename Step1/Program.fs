@@ -5,9 +5,9 @@ open Step1.Infrastructure
 
 
 type Msg =
-  | AppendFlavour_soldVanilla
-  | AppendFlavour_soldStrawberry
-  | AppendFlavour_soldStrawberryFlavourEmptyStrawberry
+  | Append_Flavour_sold_Vanilla
+  | Append_Flavour_sold_Strawberry
+  | Append_Flavour_sold_StrawberryFlavourEmptyStrawberry
   | GetEvents of AsyncReplyChannel<Event list>
 
 let mailbox () =
@@ -19,15 +19,15 @@ let mailbox () =
         let! msg = inbox.Receive()
 
         match msg with
-        | AppendFlavour_soldVanilla ->
+        | Append_Flavour_sold_Vanilla ->
             eventStore.Append [Flavour_sold Vanilla]
             return! loop eventStore
 
-        | AppendFlavour_soldStrawberry ->
+        | Append_Flavour_sold_Strawberry ->
             eventStore.Append [Flavour_sold Strawberry ]
             return! loop eventStore
 
-        | AppendFlavour_soldStrawberryFlavourEmptyStrawberry ->
+        | Append_Flavour_sold_StrawberryFlavourEmptyStrawberry ->
             eventStore.Append [Flavour_sold Strawberry ; Flavour_empty Strawberry]
             return! loop eventStore
 
@@ -40,14 +40,14 @@ let mailbox () =
   )
 
 
-let appendFlavour_soldVanilla (mailbox : MailboxProcessor<Msg>) =
-  mailbox.Post Msg.AppendFlavour_soldVanilla
+let Append_Flavour_sold_Vanilla (mailbox : MailboxProcessor<Msg>) =
+  mailbox.Post Msg.Append_Flavour_sold_Vanilla
 
-let appendFlavour_soldStrawberry (mailbox : MailboxProcessor<Msg>) =
-  mailbox.Post Msg.AppendFlavour_soldStrawberry
+let Append_Flavour_sold_Strawberry (mailbox : MailboxProcessor<Msg>) =
+  mailbox.Post Msg.Append_Flavour_sold_Strawberry
 
-let appendFlavour_soldStrawberryFlavourEmptyStrawberry (mailbox : MailboxProcessor<Msg>) =
-  mailbox.Post Msg.AppendFlavour_soldStrawberryFlavourEmptyStrawberry
+let Append_Flavour_sold_StrawberryFlavourEmptyStrawberry (mailbox : MailboxProcessor<Msg>) =
+  mailbox.Post Msg.Append_Flavour_sold_StrawberryFlavourEmptyStrawberry
 
 let getEvents (mailbox : MailboxProcessor<Msg>) =
   mailbox.PostAndReply Msg.GetEvents

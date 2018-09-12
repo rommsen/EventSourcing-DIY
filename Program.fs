@@ -6,16 +6,16 @@ open Expecto
 
 let step1 =
   [
-    ("append [Flavour_sold Vanilla]", Step1.Program.appendFlavour_soldVanilla)
-    ("append [Flavour_sold Strawberry]", Step1.Program.appendFlavour_soldStrawberry)
-    ("append [Flavour_soldStrawberry ; Flavour_Empty Strawberry]", Step1.Program.appendFlavour_soldStrawberryFlavourEmptyStrawberry)
+    ("append [Flavour_sold Vanilla]", Step1.Program.Append_Flavour_sold_Vanilla)
+    ("append [Flavour_sold Strawberry]", Step1.Program.Append_Flavour_sold_Strawberry)
+    ("append [Flavour_soldStrawberry ; Flavour_Empty Strawberry]", Step1.Program.Append_Flavour_sold_StrawberryFlavourEmptyStrawberry)
   ],  Step1.Program.getEvents >> printEvents
 
 let step2 =
   [
-    ("append [Flavour_sold Vanilla]", Step2.Program.appendFlavour_soldVanilla)
-    ("append [Flavour_sold Strawberry]", Step2.Program.appendFlavour_soldStrawberry)
-    ("append [Flavour_soldStrawberry ; Flavour_Empty Strawberry]", Step2.Program.appendFlavour_soldStrawberryFlavourEmptyStrawberry)
+    ("append [Flavour_sold Vanilla]", Step2.Program.Append_Flavour_sold_Vanilla)
+    ("append [Flavour_sold Strawberry]", Step2.Program.Append_Flavour_sold_Strawberry)
+    ("append [Flavour_soldStrawberry ; Flavour_Empty Strawberry]", Step2.Program.Append_Flavour_sold_StrawberryFlavourEmptyStrawberry)
     ("list of sold flavours", Step2.Program.listOfSoldFlavours >> printUlWithHeader "List of sold Flavours" >> waitForAnyKey)
   ],  Step2.Program.getEvents >> printEvents
 

@@ -7,7 +7,7 @@ type Flavour =
 
 type Event =
   | Flavour_sold of Flavour
-  | Icecream_Restocked of Flavour * int
+  | Flavour_restocked of Flavour * int
   | Flavour_empty of Flavour
   | Flavour_was_not_in_stock of Flavour
 
@@ -45,7 +45,7 @@ module Projections =
     | Flavour_sold flavour ->
         stock |> restock flavour -1
 
-    | Icecream_Restocked (flavour, portions) ->
+    | Flavour_restocked (flavour, portions) ->
         stock |> restock flavour portions
 
     | _ ->
@@ -81,4 +81,4 @@ module Behaviour =
 
 
   let restock flavour portions events =
-    [ Icecream_Restocked (flavour,portions) ]
+    [ Flavour_restocked (flavour,portions) ]

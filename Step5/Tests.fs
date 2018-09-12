@@ -20,7 +20,7 @@ let tests =
       test "Flavour_sold" {
         Given
           [
-              Icecream_Restocked (Vanilla,5)
+              Flavour_restocked (Vanilla,5)
               Flavour_sold Vanilla
               Flavour_sold Vanilla
           ]
@@ -31,8 +31,8 @@ let tests =
       test "Flavour_was_not_in_stock" {
         Given
           [
-              Icecream_Restocked (Vanilla,5)
-              Icecream_Restocked (Strawberry,2)
+              Flavour_restocked (Vanilla,5)
+              Flavour_restocked (Strawberry,2)
               Flavour_sold Vanilla
               Flavour_sold Vanilla
               Flavour_sold Strawberry
