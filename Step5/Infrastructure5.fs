@@ -1,4 +1,4 @@
-module Step6.Infrastructure
+namespace Step5.Infrastructure
 
 type Events<'Event> =
   'Event list

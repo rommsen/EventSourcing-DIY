@@ -1,16 +1,12 @@
-module Step5.Infrastructure
+namespace Step2.Infrastructure
 
 type Events<'Event> =
   'Event list
-
-type EventProducer<'Event> =
-  'Event list -> 'Event list
 
 type EventStore<'Event> =
   {
     Get : unit -> Events<'Event>
     Append : Events<'Event> -> unit
-    Evolve : EventProducer<'Event> -> unit
   }
 
 type Projection<'State,'Event> =
@@ -25,7 +21,6 @@ module EventStore =
   type Msg<'Event> =
     | Get of AsyncReplyChannel<'Event list>
     | Append of Events<'Event>
-    | Evolve of EventProducer<'Event>
 
   let initialize () : EventStore<'Event> =
     let history = []
@@ -43,9 +38,6 @@ module EventStore =
 
             | Append events  ->
                 return! loop (history @ events)
-
-            | Evolve producer ->
-                return! loop (history @ producer history)
           }
 
         loop history
@@ -56,13 +48,7 @@ module EventStore =
       |> Append
       |> mailbox.Post
 
-    let evolve producer =
-      producer
-      |> Evolve
-      |> mailbox.Post
-
     {
       Get = fun () ->  mailbox.PostAndReply Get
       Append = append
-      Evolve = evolve
     }

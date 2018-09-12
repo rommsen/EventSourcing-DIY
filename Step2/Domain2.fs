@@ -1,4 +1,4 @@
-module Step3.Domain
+namespace Step2.Domain
 
 type Flavour =
   | Vanilla
@@ -13,7 +13,7 @@ type Event =
 
 module Projections =
 
-  open Step3.Infrastructure
+  open Step2.Infrastructure
 
   let private updateSoldIcecreams state event =
     match event with
@@ -28,8 +28,3 @@ module Projections =
       Init = []
       Update = updateSoldIcecreams
     }
-
-module Behaviour =
-
-  let sellIceCream flavour events =
-    [Flavour_sold flavour]

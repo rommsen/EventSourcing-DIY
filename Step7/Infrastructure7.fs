@@ -1,5 +1,4 @@
-module Step7.Infrastructure
-
+namespace Step7.Infrastructure
 
 type Aggregate = System.Guid
 

@@ -1,4 +1,4 @@
-module Step2.Infrastructure
+namespace Step1.Infrastructure
 
 type Events<'Event> =
   'Event list
@@ -7,12 +7,6 @@ type EventStore<'Event> =
   {
     Get : unit -> Events<'Event>
     Append : Events<'Event> -> unit
-  }
-
-type Projection<'State,'Event> =
-  {
-    Init : 'State
-    Update : 'State -> 'Event -> 'State
   }
 
 
@@ -32,12 +26,12 @@ module EventStore =
             let! msg = inbox.Receive()
 
             match msg with
+            | Append events  ->
+                return! loop (history @ events)
+
             | Get reply ->
                 reply.Reply history
                 return! loop history
-
-            | Append events  ->
-                return! loop (history @ events)
           }
 
         loop history
@@ -49,6 +43,6 @@ module EventStore =
       |> mailbox.Post
 
     {
-      Get = fun () ->  mailbox.PostAndReply Get
       Append = append
+      Get = fun () ->  mailbox.PostAndReply Get
     }

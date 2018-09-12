@@ -1,6 +1,5 @@
 ﻿open UI
 open UI.Helper
-open System
 open Expecto
 
 
@@ -75,6 +74,7 @@ let step7 =
      ("Demo Data", Step7.Program.demoData)
      ("Truck1", fun mailbox -> Menu.initialize mailbox "Step7 - Truck1" (step7b Step7.Program.truck1))
      ("Truck2", fun mailbox -> Menu.initialize mailbox "Step7 - Truck2" (step7b Step7.Program.truck2))
+     ("Run Tests", fun _ -> runTests defaultConfig Step7.Tests.tests |> ignore ; waitForAnyKey())
   ],  Step7.Program.getEvents >> printEventsPerAggregate
 
 

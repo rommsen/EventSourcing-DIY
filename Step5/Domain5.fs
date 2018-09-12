@@ -1,5 +1,4 @@
-module Step5.Domain
-
+namespace Step5.Domain
 
 type Flavour =
   | Vanilla
