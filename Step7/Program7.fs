@@ -28,8 +28,8 @@ module Program =
 
           match msg with
           | DemoData ->
-              eventStore.Append truck2 [Flavour_restocked (Vanilla,5)]
-              eventStore.Append truck2 [Flavour_restocked (Strawberry,2)]
+              eventStore.Append truck1 [Flavour_restocked (Vanilla,5)]
+              eventStore.Append truck1 [Flavour_restocked (Strawberry,2)]
               eventStore.Append truck1 [Flavour_sold Vanilla]
               eventStore.Append truck1 [Flavour_sold Vanilla]
               eventStore.Append truck1 [Flavour_sold Strawberry ]
@@ -55,6 +55,7 @@ module Program =
               |> eventStore.GetStream
               |> Projections.project Projections.icecreamsInStock
               |> Projections.stockOf flavour
+
               |> reply.Reply
 
               return! loop eventStore
@@ -114,5 +115,5 @@ module Program =
   let listOfSoldFlavours truck (mailbox : MailboxProcessor<Msg>) =
     mailbox.PostAndReply(fun reply -> Msg.SoldIcecreams (truck,reply))
 
-  let rucksWithSoldNumberOfIcecreams (mailbox : MailboxProcessor<Msg>) =
+  let trucksWithSoldNumberOfIcecreams (mailbox : MailboxProcessor<Msg>) =
     mailbox.PostAndReply Msg.TrucksWithSoldNumberOfIcecreams
