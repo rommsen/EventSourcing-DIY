@@ -51,7 +51,7 @@ module Projections =
         stock
 
 
-  let icecreamsInStock : Projection<Map<Flavour, int>, Event> =
+  let flavoursInStock : Projection<Map<Flavour, int>, Event> =
     {
       Init = Map.empty
       Update = updateIcecreamsInStock
@@ -67,10 +67,10 @@ module Behaviour =
 
   open Projections
 
-  let sellIceCream flavour events =
+  let sellIcecream flavour events =
     let stock =
       events
-      |> project icecreamsInStock
+      |> project flavoursInStock
       |> stockOf flavour
 
     match stock with

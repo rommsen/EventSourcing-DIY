@@ -16,31 +16,31 @@ module Tests =
 
 
   let tests =
-    testList "sellIceCream"
+    testList "sellIcecream"
       [
         test "Flavour_sold" {
           Given
             [
-                Flavour_restocked (Vanilla,5)
-                Flavour_sold Vanilla
-                Flavour_sold Vanilla
+              Flavour_restocked (Vanilla,5)
+              Flavour_sold Vanilla
+              Flavour_sold Vanilla
             ]
-          |> When (Behaviour.sellIceCream Vanilla)
+          |> When (Behaviour.sellIcecream Vanilla)
           |> Then [Flavour_sold Vanilla]
         }
 
         test "Flavour_was_not_in_stock" {
           Given
             [
-                Flavour_restocked (Vanilla,5)
-                Flavour_restocked (Strawberry,2)
-                Flavour_sold Vanilla
-                Flavour_sold Vanilla
-                Flavour_sold Strawberry
-                Flavour_sold Strawberry
-                Flavour_empty Strawberry
+              Flavour_restocked (Vanilla,5)
+              Flavour_restocked (Strawberry,2)
+              Flavour_sold Vanilla
+              Flavour_sold Vanilla
+              Flavour_sold Strawberry
+              Flavour_sold Strawberry
+              Flavour_empty Strawberry
             ]
-          |> When (Behaviour.sellIceCream Strawberry)
+          |> When (Behaviour.sellIcecream Strawberry)
           |> Then [Flavour_was_not_in_stock Strawberry]
         }
 

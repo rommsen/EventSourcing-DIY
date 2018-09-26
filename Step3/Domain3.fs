@@ -31,5 +31,5 @@ module Projections =
 
 module Behaviour =
 
-  let sellIceCream flavour events =
+  let sellIcecream flavour events =
     [Flavour_sold flavour]

@@ -30,7 +30,7 @@ module Program =
               return! loop eventStore
 
           | SellIcecream flavour ->
-              eventStore.Evolve (Behaviour.sellIceCream flavour)
+              eventStore.Evolve (Behaviour.sellIcecream flavour)
               return! loop eventStore
 
           | GetEvents reply ->

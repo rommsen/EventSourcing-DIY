@@ -42,7 +42,7 @@ module Projections =
         stock
 
 
-  let icecreamsInStock : Projection<Map<Flavour, int>, Event> =
+  let flavoursInStock : Projection<Map<Flavour, int>, Event> =
     {
       Init = Map.empty
       Update = updateIcecreamsInStock
@@ -51,16 +51,16 @@ module Projections =
 
 module Behaviour =
 
-  let private numberOfFlavourInStock flavour stock =
+  let private stockOf flavour stock =
     stock
     |> Map.tryFind flavour
     |> Option.defaultValue 0
 
-  let sellIceCream flavour events =
+  let sellIcecream flavour events =
     let stock =
       events
-      |> List.fold Projections.icecreamsInStock.Update Projections.icecreamsInStock.Init
-      |> numberOfFlavourInStock flavour
+      |> List.fold Projections.flavoursInStock.Update Projections.flavoursInStock.Init
+      |> stockOf flavour
 
     match stock with
     | 0 -> [Flavour_was_not_in_stock flavour]

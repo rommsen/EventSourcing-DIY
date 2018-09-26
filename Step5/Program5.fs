@@ -32,7 +32,7 @@ module Program =
               return! loop eventStore
 
           | SellIcecream flavour ->
-              eventStore.Evolve (Behaviour.sellIceCream flavour)
+              eventStore.Evolve (Behaviour.sellIcecream flavour)
               return! loop eventStore
 
           | Restock (flavour, portions) ->
@@ -41,7 +41,7 @@ module Program =
 
           | StockOf (flavour,reply) ->
               eventStore.Get()
-              |> Projections.project Projections.icecreamsInStock
+              |> Projections.project Projections.flavoursInStock
               |> Projections.stockOf flavour
               |> reply.Reply
 
