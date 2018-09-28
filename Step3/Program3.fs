@@ -7,9 +7,9 @@ module Program =
 
   type Msg =
     | DemoData
-    | SellIcecream of Flavour
+    | SellFlavour of Flavour
     | GetEvents of AsyncReplyChannel<Event list>
-    | SoldIcecreams of AsyncReplyChannel<Flavour list>
+    | SoldFlavours of AsyncReplyChannel<Flavour list>
 
   let mailbox () =
     let eventStore : EventStore<Event> = EventStore.initialize()
@@ -27,17 +27,17 @@ module Program =
               eventStore.Append [Flavour_sold Strawberry]
               return! loop eventStore
 
-          | SellIcecream flavour ->
-              eventStore.Evolve (Behaviour.sellIcecream flavour)
+          | SellFlavour flavour ->
+              eventStore.Evolve (Behaviour.sellFlavour flavour)
               return! loop eventStore
 
           | GetEvents reply ->
               reply.Reply (eventStore.Get())
               return! loop eventStore
 
-          | SoldIcecreams reply ->
+          | SoldFlavours reply ->
               eventStore.Get()
-              |> List.fold Projections.soldIcecreams.Update Projections.soldIcecreams.Init
+              |> List.fold Projections.soldFlavours.Update Projections.soldFlavours.Init
               |> reply.Reply
 
               return! loop eventStore
@@ -50,11 +50,11 @@ module Program =
   let demoData (mailbox : MailboxProcessor<Msg>) =
     mailbox.Post Msg.DemoData
 
-  let sellIcecream flavour (mailbox : MailboxProcessor<Msg>) =
-    mailbox.Post (Msg.SellIcecream flavour)
+  let sellFlavour flavour (mailbox : MailboxProcessor<Msg>) =
+    mailbox.Post (Msg.SellFlavour flavour)
 
   let getEvents (mailbox : MailboxProcessor<Msg>) =
     mailbox.PostAndReply Msg.GetEvents
 
   let listOfSoldFlavours (mailbox : MailboxProcessor<Msg>) =
-    mailbox.PostAndReply Msg.SoldIcecreams
+    mailbox.PostAndReply Msg.SoldFlavours

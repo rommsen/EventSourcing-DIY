@@ -10,13 +10,13 @@ module Program =
 
   type Msg =
     | DemoData
-    | SellIcecream of Aggregate * Flavour
+    | SellFlavour of Aggregate * Flavour
     | Restock of Aggregate * Flavour * portions : int
     | StockOf of Aggregate * Flavour * AsyncReplyChannel<int>
     | GetEvents of AsyncReplyChannel<Events<Event>>
     | GetEventStream of Aggregate * AsyncReplyChannel<Event list>
-    | SoldIcecreams of Aggregate * AsyncReplyChannel<Flavour list>
-    | TrucksWithSoldNumberOfIcecreams of AsyncReplyChannel<Map<Aggregate,int>>
+    | SoldFlavours of Aggregate * AsyncReplyChannel<Flavour list>
+    | TrucksWithSoldNumberOfFlavours of AsyncReplyChannel<Map<Aggregate,int>>
 
   let mailbox () =
     let eventStore : EventStore<Event> = EventStore.initialize()
@@ -42,8 +42,8 @@ module Program =
 
               return! loop eventStore
 
-          | SellIcecream (truck,flavour) ->
-              eventStore.Evolve truck (Behaviour.sellIcecream flavour)
+          | SellFlavour (truck,flavour) ->
+              eventStore.Evolve truck (Behaviour.sellFlavour flavour)
               return! loop eventStore
 
           | Restock (truck, flavour, portions) ->
@@ -64,10 +64,10 @@ module Program =
               reply.Reply (eventStore.Get())
               return! loop eventStore
 
-          | SoldIcecreams (truck,reply) ->
+          | SoldFlavours (truck,reply) ->
               truck
               |> eventStore.GetStream
-              |> Projections.project Projections.soldIcecreams
+              |> Projections.project Projections.soldFlavours
               |> reply.Reply
 
               return! loop eventStore
@@ -79,11 +79,11 @@ module Program =
 
               return! loop eventStore
 
-          | TrucksWithSoldNumberOfIcecreams reply ->
+          | TrucksWithSoldNumberOfFlavours reply ->
               eventStore.Get()
               |> Map.map (fun _ events ->
                     events
-                    |> Projections.project Projections.soldIcecreams
+                    |> Projections.project Projections.soldFlavours
                     |> List.length)
               |> reply.Reply
 
@@ -97,8 +97,8 @@ module Program =
   let demoData (mailbox : MailboxProcessor<Msg>) =
     mailbox.Post Msg.DemoData
 
-  let sellIcecream truck flavour (mailbox : MailboxProcessor<Msg>) =
-    mailbox.Post (Msg.SellIcecream (truck,flavour))
+  let sellFlavour truck flavour (mailbox : MailboxProcessor<Msg>) =
+    mailbox.Post (Msg.SellFlavour (truck,flavour))
 
   let restock truck flavour portions (mailbox : MailboxProcessor<Msg>) =
     mailbox.Post (Msg.Restock (truck,flavour,portions))
@@ -113,7 +113,7 @@ module Program =
     mailbox.PostAndReply(fun reply -> Msg.GetEventStream (truck,reply))
 
   let listOfSoldFlavours truck (mailbox : MailboxProcessor<Msg>) =
-    mailbox.PostAndReply(fun reply -> Msg.SoldIcecreams (truck,reply))
+    mailbox.PostAndReply(fun reply -> Msg.SoldFlavours (truck,reply))
 
-  let trucksWithSoldNumberOfIcecreams (mailbox : MailboxProcessor<Msg>) =
-    mailbox.PostAndReply Msg.TrucksWithSoldNumberOfIcecreams
+  let trucksWithSoldNumberOfFlavours (mailbox : MailboxProcessor<Msg>) =
+    mailbox.PostAndReply Msg.TrucksWithSoldNumberOfFlavours

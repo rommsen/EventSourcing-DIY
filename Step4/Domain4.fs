@@ -23,14 +23,14 @@ module Projections =
     | _ ->
         state
 
-  let soldIcecreams : Projection<Flavour list, Event> =
+  let soldFlavours : Projection<Flavour list, Event> =
     {
       Init = []
       Update = updateSoldIcecreams
     }
 
 
-  let private updateIcecreamsInStock stock event =
+  let private updateFlavoursInStock stock event =
     match event with
     | Flavour_sold flavour ->
         stock
@@ -45,7 +45,7 @@ module Projections =
   let flavoursInStock : Projection<Map<Flavour, int>, Event> =
     {
       Init = Map.empty
-      Update = updateIcecreamsInStock
+      Update = updateFlavoursInStock
     }
 
 
@@ -56,7 +56,7 @@ module Behaviour =
     |> Map.tryFind flavour
     |> Option.defaultValue 0
 
-  let sellIcecream flavour events =
+  let sellFlavour flavour events =
     let stock =
       events
       |> List.fold Projections.flavoursInStock.Update Projections.flavoursInStock.Init

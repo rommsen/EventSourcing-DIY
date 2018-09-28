@@ -36,7 +36,7 @@ type Event =
   | Flavour_was_not_in_stock of Flavour
 
 
-let updateSoldIcecreams state event =
+let updateSoldFlavours state event =
   match event with
   | Flavour_sold flavour ->
       flavour :: state
@@ -44,10 +44,10 @@ let updateSoldIcecreams state event =
   | _ ->
       state
 
-let soldIcecreams : Projection<Flavour list, Event> =
+let soldFlavours : Projection<Flavour list, Event> =
   {
     Init = []
-    Update = updateSoldIcecreams
+    Update = updateSoldFlavours
   }
 
 let restock flavour number  stock =
@@ -56,7 +56,7 @@ let restock flavour number  stock =
   |> Option.map (fun portions -> stock |> Map.add flavour (portions + number))
   |> Option.defaultValue stock
 
-let updateIcecreamsInStock stock event =
+let updateFlavoursInStock stock event =
   match event with
   // | Flavour_sold flavour ->
   //     stock
@@ -79,10 +79,10 @@ let updateIcecreamsInStock stock event =
       stock
 
 
-let icecreamsInStock : Projection<Map<Flavour, int>, Event> =
+let flavoursInStock : Projection<Map<Flavour, int>, Event> =
   {
     Init = Map.empty
-    Update = updateIcecreamsInStock
+    Update = updateFlavoursInStock
   }
 
 let project projection events =
@@ -92,7 +92,7 @@ let project projection events =
 
 let soldIceCreams getEvents =
   getEvents()
-  |> List.fold soldIcecreams.Update soldIcecreams.Init
+  |> List.fold soldFlavours.Update soldFlavours.Init
   // erstmal so, dann beim 2. zeigen wieder das gleich
   // eine Project Funktion bauen (baue was du brauchst)
 
@@ -119,7 +119,7 @@ let numberOfFlavourInStock flavour stock =
 let sellIceCream flavour events =
   let stock =
     events
-    |> project icecreamsInStock
+    |> project flavoursInStock
     |> numberOfFlavourInStock flavour
 
   match stock with

@@ -12,7 +12,7 @@ module Program =
     | Append_Flavour_sold_Strawberry
     | Append_Flavour_sold_StrawberryFlavourEmptyStrawberry
     | GetEvents of AsyncReplyChannel<Event list>
-    | SoldIcecreams of AsyncReplyChannel<Flavour list>
+    | SoldFlavours of AsyncReplyChannel<Flavour list>
 
   let mailbox () =
     let eventStore : EventStore<Event> = EventStore.initialize()
@@ -39,9 +39,9 @@ module Program =
               reply.Reply (eventStore.Get())
               return! loop eventStore
 
-          | SoldIcecreams reply ->
+          | SoldFlavours reply ->
               eventStore.Get()
-              |> List.fold Projections.soldIcecreams.Update Projections.soldIcecreams.Init
+              |> List.fold Projections.soldFlavours.Update Projections.soldFlavours.Init
               |> reply.Reply
 
               return! loop eventStore
@@ -64,4 +64,4 @@ module Program =
     mailbox.PostAndReply Msg.GetEvents
 
   let listOfSoldFlavours (mailbox : MailboxProcessor<Msg>) =
-    mailbox.PostAndReply Msg.SoldIcecreams
+    mailbox.PostAndReply Msg.SoldFlavours

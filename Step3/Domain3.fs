@@ -15,7 +15,7 @@ module Projections =
 
   open Step3.Infrastructure
 
-  let private updateSoldIcecreams state event =
+  let private updateSoldFlavours state event =
     match event with
     | Flavour_sold flavour ->
         flavour :: state
@@ -23,13 +23,13 @@ module Projections =
     | _ ->
         state
 
-  let soldIcecreams : Projection<Flavour list, Event> =
+  let soldFlavours : Projection<Flavour list, Event> =
     {
       Init = []
-      Update = updateSoldIcecreams
+      Update = updateSoldFlavours
     }
 
 module Behaviour =
 
-  let sellIcecream flavour events =
+  let sellFlavour flavour events =
     [Flavour_sold flavour]

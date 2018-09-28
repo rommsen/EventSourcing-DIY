@@ -16,7 +16,7 @@ module Tests =
 
 
   let tests =
-    testList "sellIcecream"
+    testList "sellFlavour"
       [
         test "Flavour_sold" {
           Given
@@ -25,7 +25,7 @@ module Tests =
               Flavour_sold Vanilla
               Flavour_sold Vanilla
             ]
-          |> When (Behaviour.sellIcecream Vanilla)
+          |> When (Behaviour.sellFlavour Vanilla)
           |> Then [Flavour_sold Vanilla]
         }
 
@@ -40,7 +40,7 @@ module Tests =
               Flavour_sold Strawberry
               Flavour_empty Strawberry
             ]
-          |> When (Behaviour.sellIcecream Strawberry)
+          |> When (Behaviour.sellFlavour Strawberry)
           |> Then [Flavour_was_not_in_stock Strawberry]
         }
 

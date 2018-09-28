@@ -18,7 +18,7 @@ module Projections =
   let project projection events =
     events |> List.fold projection.Update projection.Init
 
-  let private updateSoldIcecreams state event =
+  let private updateSoldFlavours state event =
     match event with
     | Flavour_sold flavour ->
         flavour :: state
@@ -26,10 +26,10 @@ module Projections =
     | _ ->
         state
 
-  let soldIcecreams : Projection<Flavour list, Event> =
+  let soldFlavours : Projection<Flavour list, Event> =
     {
       Init = []
-      Update = updateSoldIcecreams
+      Update = updateSoldFlavours
     }
 
   let restock flavour number stock =
@@ -66,7 +66,7 @@ module Behaviour =
 
   open Projections
 
-  let sellIcecream flavour events =
+  let sellFlavour flavour events =
     let stock =
       events
       |> project flavoursInStock
