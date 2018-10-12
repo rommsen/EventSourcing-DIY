@@ -1,31 +1,27 @@
-namespace Step4
+namespace Step4.Infrastructure
 
-module Infrastructure =
+type Events<'Event> =
+  'Event list
 
-  type Events<'Event> =
-    'Event list
+type EventProducer<'Event> =
+  'Event list -> 'Event list
 
-  type EventProducer<'Event> =
-    'Event list -> 'Event list
+type EventStore<'Event> =
+  {
+    Get : unit -> Events<'Event>
+    Append : Events<'Event> -> unit
+    Evolve : EventProducer<'Event> -> unit
+  }
 
-  type EventStore<'Event> =
-    {
-      Get : unit -> Events<'Event>
-      Append : Events<'Event> -> unit
-      Evolve : EventProducer<'Event> -> unit
-    }
-
-  type Projection<'State,'Event> =
-    {
-      Init : 'State
-      Update : 'State -> 'Event -> 'State
-    }
+type Projection<'State,'Event> =
+  {
+    Init : 'State
+    Update : 'State -> 'Event -> 'State
+  }
 
 
 module EventStore =
 
-  open Infrastructure
-  
   type Msg<'Event> =
     | Get of AsyncReplyChannel<'Event list>
     | Append of Events<'Event>

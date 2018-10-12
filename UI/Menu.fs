@@ -18,7 +18,7 @@ module Menu =
           Console.ForegroundColor <- ConsoleColor.White
           Console.BackgroundColor <- ConsoleColor.DarkBlue
 
-        Console.WriteLine (sprintf "%i. %s" (index + 1) name)
+        Console.WriteLine (sprintf " %i. %s" (index + 1) name)
         Console.ResetColor())
 
   let initialize<'actionParam> (actionParam : 'actionParam) menu (options,footerAction) =

@@ -15,28 +15,39 @@ module Projections =
 
   open Step4.Infrastructure
 
-  let private updateSoldIcecreams state event =
+  let project projection events =
+    events |> List.fold projection.Update projection.Init
+
+  let private updateSoldFlavours state event =
     match event with
     | Flavour_sold flavour ->
-        flavour :: state
+        state
+        |> Map.tryFind flavour
+        |> Option.defaultValue 0
+        |> fun portions -> state |> Map.add flavour (portions + 1)
 
     | _ ->
         state
 
-  let soldFlavours : Projection<Flavour list, Event> =
+  let soldFlavours : Projection<Map<Flavour,int>, Event> =
     {
-      Init = []
-      Update = updateSoldIcecreams
+      Init = Map.empty
+      Update = updateSoldFlavours
     }
 
+  let restock flavour number stock =
+    stock
+    |> Map.tryFind flavour
+    |> Option.map (fun portions -> stock |> Map.add flavour (portions + number))
+    |> Option.defaultValue stock
 
-  let private updateFlavoursInStock stock event =
+  let updateFlavoursInStock stock event =
     match event with
     | Flavour_sold flavour ->
-        stock
-        |> Map.tryFind flavour
-        |> Option.map (fun portions -> stock |> Map.add flavour (portions - 1))
-        |> Option.defaultValue stock
+        stock |> restock flavour -1
+
+    | Flavour_restocked (flavour, portions) ->
+        stock |> restock flavour portions
 
     | _ ->
         stock
@@ -48,21 +59,27 @@ module Projections =
       Update = updateFlavoursInStock
     }
 
-
-module Behaviour =
-
-  let private stockOf flavour stock =
+  let stockOf flavour stock =
     stock
     |> Map.tryFind flavour
     |> Option.defaultValue 0
 
+
+module Behaviour =
+
+  open Projections
+
   let sellFlavour flavour events =
     let stock =
       events
-      |> List.fold Projections.flavoursInStock.Update Projections.flavoursInStock.Init
+      |> project flavoursInStock
       |> stockOf flavour
 
     match stock with
     | 0 -> [Flavour_was_not_in_stock flavour]
     | 1 -> [Flavour_sold flavour ; Flavour_empty flavour]
     | _ -> [Flavour_sold flavour]
+
+
+  let restock flavour portions events =
+    [ Flavour_restocked (flavour,portions) ]

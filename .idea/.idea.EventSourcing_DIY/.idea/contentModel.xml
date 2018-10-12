@@ -16,6 +16,11 @@
         <e p="Infrastructure.fs" t="Include" />
         <e p="Program.fs" t="Include" />
       </e>
+      <e p="Step1" t="Include">
+        <e p="Domain.fs" t="Include" />
+        <e p="Infrastructure.fs" t="Include" />
+        <e p="Program.fs" t="Include" />
+      </e>
       <e p="Step2" t="Include">
         <e p="Domain.fs" t="Include" />
         <e p="Infrastructure.fs" t="Include" />
@@ -32,11 +37,6 @@
         <e p="Program.fs" t="Include" />
       </e>
       <e p="Step5" t="Include">
-        <e p="Domain.fs" t="Include" />
-        <e p="Infrastructure.fs" t="Include" />
-        <e p="Program.fs" t="Include" />
-      </e>
-      <e p="Step6" t="Include">
         <e p="Domain.fs" t="Include" />
         <e p="Infrastructure.fs" t="Include" />
         <e p="Program.fs" t="Include" />

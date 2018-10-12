@@ -1,5 +1,7 @@
 namespace Step6.Domain
 
+type Truck = System.Guid
+
 type Flavour =
   | Vanilla
   | Strawberry
@@ -21,14 +23,17 @@ module Projections =
   let private updateSoldFlavours state event =
     match event with
     | Flavour_sold flavour ->
-        flavour :: state
+        state
+        |> Map.tryFind flavour
+        |> Option.defaultValue 0
+        |> fun portions -> state |> Map.add flavour (portions + 1)
 
     | _ ->
         state
 
-  let soldFlavours : Projection<Flavour list, Event> =
+  let soldFlavours : Projection<Map<Flavour,int>, Event> =
     {
-      Init = []
+      Init = Map.empty
       Update = updateSoldFlavours
     }
 

@@ -12,9 +12,13 @@ module Helper =
     list
     |> List.iteri (fun i item -> printfn " %i: %A" (i+1) item)
 
-  let inline printUlWithHeader header list =
+  let inline printMapWithHeader header map =
     header |> printfn "%s:\n"
-    list |> printUl
+    map
+    |> Map.toList
+    |> List.map (fun (key,value) -> sprintf "%A: %A" key value)
+    |> printUl
+
 
   let printEvents  events =
     events

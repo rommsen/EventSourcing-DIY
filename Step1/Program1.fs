@@ -5,12 +5,14 @@ module Program =
   open Step1.Domain
   open Step1.Infrastructure
 
+  let eventStore : EventStore<Event> = EventStore.initialize()
 
   type Msg =
     | Append_Flavour_sold_Vanilla
     | Append_Flavour_sold_Strawberry
     | Append_Flavour_sold_StrawberryFlavourEmptyStrawberry
     | GetEvents of AsyncReplyChannel<Event list>
+    | SoldFlavours of AsyncReplyChannel<Map<Flavour,int>>
 
   let mailbox () =
     let eventStore : EventStore<Event> = EventStore.initialize()
@@ -36,6 +38,13 @@ module Program =
           | GetEvents reply ->
               reply.Reply (eventStore.Get())
               return! loop eventStore
+
+          | SoldFlavours reply ->
+              eventStore.Get()
+              |> List.fold Projections.soldFlavours.Update Projections.soldFlavours.Init
+              |> reply.Reply
+
+              return! loop eventStore
         }
 
       loop eventStore
@@ -53,3 +62,6 @@ module Program =
 
   let getEvents (mailbox : MailboxProcessor<Msg>) =
     mailbox.PostAndReply Msg.GetEvents
+
+  let listOfSoldFlavours (mailbox : MailboxProcessor<Msg>) =
+    mailbox.PostAndReply Msg.SoldFlavours

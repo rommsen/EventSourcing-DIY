@@ -1,10 +1,10 @@
-namespace Step7
+namespace Step4
 
 module Tests =
 
   open Expecto
   open Expecto.Expect
-  open Step7.Domain
+  open Step4.Domain
 
   let Given = id
 
