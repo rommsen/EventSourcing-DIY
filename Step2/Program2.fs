@@ -21,10 +21,12 @@ module Program =
 
           match msg with
           | DemoData ->
+              eventStore.Append [Flavour_restocked (Vanilla,5)]
+              eventStore.Append [Flavour_restocked (Strawberry,2)]
               eventStore.Append [Flavour_sold Vanilla]
               eventStore.Append [Flavour_sold Vanilla]
               eventStore.Append [Flavour_sold Strawberry ]
-              eventStore.Append [Flavour_sold Strawberry]
+              eventStore.Append [Flavour_sold Strawberry ; Flavour_went_out_of_stock Strawberry]
               return! loop eventStore
 
           | SellFlavour flavour ->

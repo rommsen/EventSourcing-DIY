@@ -32,7 +32,7 @@ module Program =
               return! loop eventStore
 
           | Append_Flavour_sold_StrawberryFlavourEmptyStrawberry ->
-              eventStore.Append [Flavour_sold Strawberry ; Flavour_empty Strawberry]
+              eventStore.Append [Flavour_sold Strawberry ; Flavour_went_out_of_stock Strawberry]
               return! loop eventStore
 
           | GetEvents reply ->

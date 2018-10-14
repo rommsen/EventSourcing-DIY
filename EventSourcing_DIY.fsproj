@@ -14,6 +14,7 @@
     <Compile Include="Step3/Infrastructure3.fs" />
     <Compile Include="Step3/Domain3.fs" />
     <Compile Include="Step3/Program3.fs" />
+    <Compile Include="Step3/Tests3.fs" />
     <Compile Include="Step4/Infrastructure4.fs" />
     <Compile Include="Step4/Domain4.fs" />
     <Compile Include="Step4/Program4.fs" />
@@ -22,10 +23,6 @@
     <Compile Include="Step5/Domain5.fs" />
     <Compile Include="Step5/Program5.fs" />
     <Compile Include="Step5/Tests5.fs" />
-    <Compile Include="Step6/Infrastructure6.fs" />
-    <Compile Include="Step6/Domain6.fs" />
-    <Compile Include="Step6/Program6.fs" />
-    <Compile Include="Step6/Tests6.fs" />
     <Compile Include="Brainstorming/Infrastructure.fs" />
     <Compile Include="Brainstorming/Domain.fs" />
     <Compile Include="UI/Menu.fs" />

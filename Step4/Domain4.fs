@@ -7,7 +7,7 @@ type Flavour =
 type Event =
   | Flavour_sold of Flavour
   | Flavour_restocked of Flavour * int
-  | Flavour_empty of Flavour
+  | Flavour_went_out_of_stock of Flavour
   | Flavour_was_not_in_stock of Flavour
 
 
@@ -38,8 +38,8 @@ module Projections =
   let restock flavour number stock =
     stock
     |> Map.tryFind flavour
-    |> Option.map (fun portions -> stock |> Map.add flavour (portions + number))
-    |> Option.defaultValue stock
+    |> Option.defaultValue 0
+    |> fun portions -> stock |> Map.add flavour (portions + number)
 
   let updateFlavoursInStock stock event =
     match event with
@@ -77,7 +77,7 @@ module Behaviour =
 
     match stock with
     | 0 -> [Flavour_was_not_in_stock flavour]
-    | 1 -> [Flavour_sold flavour ; Flavour_empty flavour]
+    | 1 -> [Flavour_sold flavour ; Flavour_went_out_of_stock flavour]
     | _ -> [Flavour_sold flavour]
 
 

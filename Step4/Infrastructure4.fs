@@ -1,5 +1,6 @@
 namespace Step4.Infrastructure
 
+
 type Events<'Event> =
   'Event list
 

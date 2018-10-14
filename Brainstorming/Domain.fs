@@ -32,7 +32,7 @@ type Flavour =
 type Event =
   | Flavour_sold of Flavour
   | Flavour_restocked of Flavour * int
-  | Flavour_empty of Flavour
+  | Flavour_went_out_of_stock of Flavour
   | Flavour_was_not_in_stock of Flavour
 
 
@@ -124,7 +124,7 @@ let sellIceCream flavour events =
 
   match stock with
   | 0 -> [Flavour_was_not_in_stock flavour]
-  | 1 -> [Flavour_sold flavour ; Flavour_empty flavour]
+  | 1 -> [Flavour_sold flavour ; Flavour_went_out_of_stock flavour]
   | _ -> [Flavour_sold flavour]
 
 

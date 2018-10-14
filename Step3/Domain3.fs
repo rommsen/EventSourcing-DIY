@@ -7,13 +7,16 @@ type Flavour =
 type Event =
   | Flavour_sold of Flavour
   | Flavour_restocked of Flavour * int
-  | Flavour_empty of Flavour
+  | Flavour_went_out_of_stock of Flavour
   | Flavour_was_not_in_stock of Flavour
 
 
 module Projections =
 
   open Step3.Infrastructure
+
+  let project projection events =
+    events |> List.fold projection.Update projection.Init
 
   let private updateSoldFlavours state event =
     match event with
@@ -32,14 +35,19 @@ module Projections =
       Update = updateSoldFlavours
     }
 
+  let restock flavour number stock =
+    stock
+    |> Map.tryFind flavour
+    |> Option.map (fun portions -> stock |> Map.add flavour (portions + number))
+    |> Option.defaultValue stock
 
-  let private updateFlavoursInStock stock event =
+  let updateFlavoursInStock stock event =
     match event with
     | Flavour_sold flavour ->
-        stock
-        |> Map.tryFind flavour
-        |> Option.map (fun portions -> stock |> Map.add flavour (portions - 1))
-        |> Option.defaultValue stock
+        stock |> restock flavour -1
+
+    | Flavour_restocked (flavour, portions) ->
+        stock |> restock flavour portions
 
     | _ ->
         stock
@@ -51,21 +59,27 @@ module Projections =
       Update = updateFlavoursInStock
     }
 
-
-module Behaviour =
-
-  let private stockOf flavour stock =
+  let stockOf flavour stock =
     stock
     |> Map.tryFind flavour
     |> Option.defaultValue 0
 
+
+module Behaviour =
+
+  open Projections
+
   let sellFlavour flavour events =
     let stock =
       events
-      |> List.fold Projections.flavoursInStock.Update Projections.flavoursInStock.Init
+      |> project flavoursInStock
       |> stockOf flavour
 
     match stock with
     | 0 -> [Flavour_was_not_in_stock flavour]
-    | 1 -> [Flavour_sold flavour ; Flavour_empty flavour]
+    | 1 -> [Flavour_sold flavour ; Flavour_went_out_of_stock flavour]
     | _ -> [Flavour_sold flavour]
+
+
+  let restock flavour portions events =
+    [ Flavour_restocked (flavour,portions) ]

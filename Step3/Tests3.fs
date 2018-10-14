@@ -1,10 +1,10 @@
-namespace Step6
+namespace Step3
 
 module Tests =
 
   open Expecto
   open Expecto.Expect
-  open Step6.Domain
+  open Step3.Domain
 
   let Given = id
 
@@ -13,7 +13,6 @@ module Tests =
 
   let Then expectedEvents events =
     equal events expectedEvents "Events should equal expected events"
-
 
   let tests =
     testList "sellFlavour"
@@ -38,7 +37,7 @@ module Tests =
               Flavour_sold Vanilla
               Flavour_sold Strawberry
               Flavour_sold Strawberry
-              Flavour_empty Strawberry
+              Flavour_went_out_of_stock Strawberry
             ]
           |> When (Behaviour.sellFlavour Strawberry)
           |> Then [Flavour_was_not_in_stock Strawberry]
