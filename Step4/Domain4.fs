@@ -1,5 +1,7 @@
 namespace Step4.Domain
 
+type Truck = System.Guid
+
 type Flavour =
   | Vanilla
   | Strawberry

@@ -38,8 +38,8 @@ module Projections =
   let restock flavour number stock =
     stock
     |> Map.tryFind flavour
-    |> Option.map (fun portions -> stock |> Map.add flavour (portions + number))
-    |> Option.defaultValue stock
+    |> Option.defaultValue 0
+    |> fun portions -> stock |> Map.add flavour (portions + number)
 
   let updateFlavoursInStock stock event =
     match event with
