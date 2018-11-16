@@ -1,6 +1,9 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "EventSourcing_DIY", "EventSourcing_DIY.fsproj", "{C58888BB-7561-42E9-A67A-4B687FCF3F35}"
+#
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Talk", "Talk\Talk.fsproj", "{C58888BB-7561-42E9-A67A-4B687FCF3F35}"
+EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Videos", "Videos\Videos.fsproj", "{196E5015-C834-4653-8E8B-F1FC0D216AAB}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -12,5 +15,9 @@ Global
 		{C58888BB-7561-42E9-A67A-4B687FCF3F35}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C58888BB-7561-42E9-A67A-4B687FCF3F35}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{C58888BB-7561-42E9-A67A-4B687FCF3F35}.Release|Any CPU.Build.0 = Release|Any CPU
+		{196E5015-C834-4653-8E8B-F1FC0D216AAB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{196E5015-C834-4653-8E8B-F1FC0D216AAB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{196E5015-C834-4653-8E8B-F1FC0D216AAB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{196E5015-C834-4653-8E8B-F1FC0D216AAB}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
