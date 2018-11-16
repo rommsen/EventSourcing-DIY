@@ -13,7 +13,7 @@ module Program =
     | SellFlavour of Aggregate * Flavour
     | Restock of Aggregate * Flavour * portions : int
     | StockOf of Aggregate * Flavour * AsyncReplyChannel<int>
-    | GetEvents of AsyncReplyChannel<Events<Event>>
+    | GetEvents of AsyncReplyChannel<Map<Aggregate,Event list>>
     | GetEventStream of Aggregate * AsyncReplyChannel<Event list>
     | SoldFlavours of Aggregate * AsyncReplyChannel<Map<Flavour,int>>
     | TrucksWithSoldNumberOfFlavours of AsyncReplyChannel<Map<Aggregate,int>>

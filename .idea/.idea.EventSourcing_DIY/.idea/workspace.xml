@@ -1,32 +1,121 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="52383df3-3a27-4683-8b27-1cfa33216da4" name="Default" comment="" />
+    <list default="true" id="52383df3-3a27-4683-8b27-1cfa33216da4" name="Default" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/.idea.EventSourcing_DIY/.idea/contentModel.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.EventSourcing_DIY/.idea/contentModel.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/.idea.EventSourcing_DIY/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.idea.EventSourcing_DIY/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.paket/Paket.Restore.targets" beforeDir="false" afterPath="$PROJECT_DIR$/.paket/Paket.Restore.targets" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Program.fs" beforeDir="false" afterPath="$PROJECT_DIR$/Program.fs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Step2/Program2.fs" beforeDir="false" afterPath="$PROJECT_DIR$/Step2/Program2.fs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Step4/Infrastructure4.fs" beforeDir="false" afterPath="$PROJECT_DIR$/Step4/Infrastructure4.fs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Step4/Program4.fs" beforeDir="false" afterPath="$PROJECT_DIR$/Step4/Program4.fs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/paket-files/paket.restore.cached" beforeDir="false" afterPath="$PROJECT_DIR$/paket-files/paket.restore.cached" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/paket.dependencies" beforeDir="false" afterPath="$PROJECT_DIR$/paket.dependencies" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/paket.lock" beforeDir="false" afterPath="$PROJECT_DIR$/paket.lock" afterDir="false" />
+    </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
     <option name="LAST_RESOLUTION" value="IGNORE" />
   </component>
-  <component name="FUSProjectUsageTrigger">
-    <session id="1512042883">
-      <usages-collector id="statistics.lifecycle.project">
-        <counts>
-          <entry key="project.closed" value="1" />
-          <entry key="project.open.time.3" value="1" />
-          <entry key="project.opened" value="1" />
-        </counts>
-      </usages-collector>
-    </session>
+  <component name="FileEditorManager">
+    <leaf SIDE_TABS_SIZE_LIMIT_KEY="300">
+      <file pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/Program.fs">
+          <provider selected="true" editor-type-id="text-editor">
+            <state>
+              <caret line="33" column="22" selection-start-line="33" selection-start-column="22" selection-end-line="33" selection-end-column="22" />
+              <folding>
+                <marker date="1539944626526" expanded="true" signature="0:3831" ph="open UI ..." />
+                <marker date="1539944626526" expanded="true" signature="47:527" ph=" = ..." />
+                <marker date="1539944626526" expanded="true" signature="52:527" ph="[ ..." />
+                <marker date="1539944626526" expanded="true" signature="539:1228" ph=" = ..." />
+                <marker date="1539944626526" expanded="true" signature="544:1228" ph="[ ..." />
+                <marker date="1539944626526" expanded="true" signature="1239:2139" ph=" = ..." />
+                <marker date="1539944626526" expanded="true" signature="1244:2139" ph="[ ..." />
+                <marker date="1539944626526" expanded="true" signature="2157:2848" ph=" = ..." />
+                <marker date="1539944626526" expanded="true" signature="2162:2848" ph="[ ..." />
+                <marker date="1539944626526" expanded="true" signature="2860:3363" ph=" = ..." />
+                <marker date="1539944626526" expanded="true" signature="2865:3363" ph="[ ..." />
+                <marker date="1539944626526" expanded="true" signature="3390:3831" ph=" = ..." />
+                <marker date="1539944626526" expanded="true" signature="3403:3761" ph=" = ..." />
+                <marker date="1539944626526" expanded="true" signature="3410:3761" ph="[ ..." />
+              </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/Step1/Program1.fs">
+          <provider selected="true" editor-type-id="text-editor">
+            <state>
+              <caret line="26" column="14" selection-start-line="26" selection-start-column="14" selection-end-line="26" selection-end-column="14" />
+              <folding>
+                <marker date="1539373062760" expanded="true" signature="31:2108" ph=" = ..." />
+                <marker date="1539373062760" expanded="false" signature="42:82" ph="..." />
+                <marker date="1539373062760" expanded="true" signature="159:397" ph="= ..." />
+                <marker date="1539373062760" expanded="true" signature="165:397" ph="| Append_Flavour_sold_Vanilla ..." />
+                <marker date="1539373062760" expanded="true" signature="415:1495" ph=" = ..." />
+                <marker date="1539373062760" expanded="true" signature="520:1489" ph=" -&gt; ..." />
+                <marker date="1539373062760" expanded="true" signature="553:1466" ph=" = ..." />
+                <marker date="1539373062760" expanded="true" signature="571:1465" ph=" ..." />
+                <marker date="1539373062760" expanded="true" signature="634:1456" ph=" ..." />
+                <marker date="1539373062760" expanded="true" signature="674:770" ph=" -&gt; ..." />
+                <marker date="1539373062760" expanded="true" signature="814:914" ph=" -&gt; ..." />
+                <marker date="1539373062760" expanded="true" signature="980:1118" ph=" -&gt; ..." />
+                <marker date="1539373062760" expanded="true" signature="1147:1233" ph=" -&gt; ..." />
+                <marker date="1539373062760" expanded="true" signature="1265:1456" ph=" -&gt; ..." />
+                <marker date="1539373062760" expanded="true" signature="1565:1616" ph=" = ..." />
+                <marker date="1539373062760" expanded="true" signature="1688:1742" ph=" = ..." />
+                <marker date="1539373062760" expanded="true" signature="1836:1912" ph=" = ..." />
+                <marker date="1539373062760" expanded="true" signature="1963:2004" ph=" = ..." />
+                <marker date="1539373062760" expanded="true" signature="2064:2108" ph=" = ..." />
+              </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file pinned="false" current-in-tab="true">
+        <entry file="file://$PROJECT_DIR$/Step4/Tests4.fs">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="180">
+              <caret line="15" selection-start-line="15" selection-end-line="15" />
+              <folding>
+                <marker date="1541768948825" expanded="true" signature="29:1266" ph=" = ..." />
+                <marker date="1541768948825" expanded="false" signature="40:89" ph="..." />
+                <marker date="1541768948825" expanded="true" signature="134:155" ph=" = ..." />
+                <marker date="1541768948825" expanded="true" signature="189:261" ph=" = ..." />
+                <marker date="1541768948825" expanded="true" signature="274:1266" ph=" = ..." />
+                <marker date="1541768948825" expanded="true" signature="311:1265" ph=" ..." />
+                <marker date="1541768948825" expanded="true" signature="341:599" ph=" ..." />
+                <marker date="1541768948825" expanded="true" signature="357:499" ph=" ..." />
+                <marker date="1541768948825" expanded="true" signature="371:498" ph=" ..." />
+                <marker date="1541768948825" expanded="true" signature="643:1093" ph=" ..." />
+                <marker date="1541768948825" expanded="true" signature="659:975" ph=" ..." />
+                <marker date="1541768948825" expanded="true" signature="673:974" ph=" ..." />
+                <marker date="1541768948825" expanded="true" signature="1130:1257" ph=" ..." />
+              </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+    </leaf>
   </component>
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
-  <component name="JsBuildToolGruntFileManager" detection-done="true" sorting="DEFINITION_ORDER" />
-  <component name="JsBuildToolPackageJson" detection-done="true" sorting="DEFINITION_ORDER" />
-  <component name="JsGulpfileManager">
-    <detection-done>true</detection-done>
-    <sorting>DEFINITION_ORDER</sorting>
+  <component name="HighlightingSettingsPerFile">
+    <setting file="file://$PROJECT_DIR$/Step1/Program1.fs" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/Program.fs" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/Step4/Tests4.fs" root0="FORCE_HIGHLIGHTING" />
+  </component>
+  <component name="IdeDocumentHistory">
+    <option name="CHANGED_PATHS">
+      <list>
+        <option value="$PROJECT_DIR$/Step4/Tests4.fs" />
+      </list>
+    </option>
   </component>
   <component name="ProjectFrameBounds" extendedState="6">
     <option name="x" value="399" />
@@ -39,25 +128,27 @@
       <foldersAlwaysOnTop value="true" />
     </navigator>
     <panes>
+      <pane id="FileSystemExplorer" />
+      <pane id="AssemblyExplorer" />
       <pane id="SolutionExplorer">
         <subPane>
           <expand>
             <path>
-              <item name="" type="13324e5d:SolutionExplorerViewPane$ProjectViewPaneTreeStructure$createRoot$1" />
-              <item name="EventSourcing_DIY (1 project)" type="977d5f41:SolutionExplorerNodeRider" />
+              <item name="Project" type="784c90a0:SolutionExplorerRootNode" />
+              <item name="EventSourcing_DIY" type="24d0babc:SolutionExplorerModelNode" />
             </path>
           </expand>
           <select />
         </subPane>
         <option name="show-all-files" value="false" />
       </pane>
-      <pane id="FileSystemExplorer" />
     </panes>
   </component>
   <component name="PropertiesComponent">
     <property name="Rider.DefaultBreakpoints.AreToggled" value="true" />
     <property name="Rider.ProjectViewActivator.IsNotFirstRun" value="true" />
     <property name="WebServerToolWindowFactoryState" value="false" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$" />
   </component>
   <component name="RunDashboard">
     <option name="ruleStates">
@@ -71,7 +162,7 @@
       </list>
     </option>
   </component>
-  <component name="RunManager">
+  <component name="RunManager" selected=".NET Project.EventSourcing_DIY">
     <configuration name="Default" type="DotNetProject" factoryName=".NET Project">
       <option name="EXE_PATH" value="" />
       <option name="PROGRAM_PARAMETERS" value="" />
@@ -90,6 +181,29 @@
         <option name="Build" enabled="true" />
       </method>
     </configuration>
+    <configuration name="EventSourcing_DIY" type="DotNetProject" factoryName=".NET Project" temporary="true">
+      <option name="EXE_PATH" value="$PROJECT_DIR$/bin/Debug/netcoreapp2.0/EventSourcing_DIY.dll" />
+      <option name="PROGRAM_PARAMETERS" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="PASS_PARENT_ENVS" value="1" />
+      <option name="USE_EXTERNAL_CONSOLE" value="0" />
+      <option name="USE_MONO" value="0" />
+      <option name="RUNTIME_ARGUMENTS" value="" />
+      <option name="PROJECT_PATH" value="$PROJECT_DIR$/EventSourcing_DIY.fsproj" />
+      <option name="PROJECT_EXE_PATH_TRACKING" value="1" />
+      <option name="PROJECT_ARGUMENTS_TRACKING" value="1" />
+      <option name="PROJECT_WORKING_DIRECTORY_TRACKING" value="1" />
+      <option name="PROJECT_KIND" value="DotNetCore" />
+      <option name="PROJECT_TFM" value=".NETCoreApp,Version=v2.0" />
+      <method v="2">
+        <option name="Build" enabled="true" />
+      </method>
+    </configuration>
+    <recent_temporary>
+      <list>
+        <item itemvalue=".NET Project.EventSourcing_DIY" />
+      </list>
+    </recent_temporary>
   </component>
   <component name="SvnConfiguration">
     <configuration />
@@ -103,11 +217,13 @@
       <updated>1535445834684</updated>
       <workItem from="1535445837699" duration="26000" />
       <workItem from="1535530257685" duration="2000" />
+      <workItem from="1541767932221" duration="892000" />
+      <workItem from="1541768877132" duration="265000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="28000" />
+    <option name="totallyTimeSpent" value="1185000" />
   </component>
   <component name="TodoView">
     <todo-panel id="selected-file">
@@ -121,29 +237,31 @@
   <component name="ToolWindowManager">
     <frame x="-8" y="-8" width="1936" height="1056" extended-state="6" />
     <layout>
-      <window_info active="true" content_ui="combo" id="Project" order="0" visible="true" weight="0.25266525" />
+      <window_info active="true" content_ui="combo" id="Project" order="0" visible="true" weight="0.25799572" />
       <window_info id="Structure" order="1" side_tool="true" weight="0.25" />
       <window_info id="Favorites" order="2" side_tool="true" />
       <window_info anchor="bottom" id="Message" order="0" />
       <window_info anchor="bottom" id="Find" order="1" />
       <window_info anchor="bottom" id="Run" order="2" />
-      <window_info anchor="bottom" id="Debug" order="3" weight="0.4" />
+      <window_info anchor="bottom" id="Debug" order="3" weight="0.3997833" />
       <window_info anchor="bottom" id="Cvs" order="4" weight="0.25" />
       <window_info anchor="bottom" id="Inspection" order="5" weight="0.4" />
       <window_info anchor="bottom" id="TODO" order="6" />
       <window_info anchor="bottom" id="NuGet" order="7" />
       <window_info anchor="bottom" id="Docker" order="8" show_stripe_button="false" />
       <window_info anchor="bottom" id="Database Changes" order="9" show_stripe_button="false" />
-      <window_info anchor="bottom" id="Unit Tests" order="10" />
-      <window_info anchor="bottom" id="Terminal" order="11" />
+      <window_info anchor="bottom" id="Unit Tests" order="10" visible="true" weight="0.32936078" />
+      <window_info anchor="bottom" id="Terminal" order="11" weight="0.32936078" />
       <window_info anchor="bottom" id="Event Log" order="12" side_tool="true" />
       <window_info anchor="bottom" id="Version Control" order="13" />
-      <window_info anchor="right" id="Unit Tests Coverage" />
+      <window_info anchor="bottom" id="Performance Profiler" order="14" />
+      <window_info anchor="bottom" id="Build" order="15" weight="0.32936078" />
       <window_info anchor="right" id="Commander" internal_type="SLIDING" order="0" type="SLIDING" weight="0.4" />
       <window_info anchor="right" id="Ant Build" order="1" weight="0.25" />
       <window_info anchor="right" content_ui="combo" id="Hierarchy" order="2" weight="0.25" />
       <window_info anchor="right" id="Errors In Solution" order="3" />
       <window_info anchor="right" id="Database" order="4" />
+      <window_info anchor="right" id="Unit Tests Coverage" order="5" />
     </layout>
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -151,9 +269,6 @@
   </component>
   <component name="UnityProjectConfiguration" hasMinimizedUI="null" />
   <component name="UnityUnitTestConfiguration" currentTestLauncher="NUnit" />
-  <component name="VcsContentAnnotationSettings">
-    <option name="myLimit" value="2678400000" />
-  </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
       <breakpoints>
@@ -163,5 +278,80 @@
         </breakpoint>
       </breakpoints>
     </breakpoint-manager>
+  </component>
+  <component name="editorHistoryManager">
+    <entry file="file://$PROJECT_DIR$/Program.fs">
+      <provider selected="true" editor-type-id="text-editor">
+        <state>
+          <caret line="33" column="22" selection-start-line="33" selection-start-column="22" selection-end-line="33" selection-end-column="22" />
+          <folding>
+            <marker date="1539944626526" expanded="true" signature="0:3831" ph="open UI ..." />
+            <marker date="1539944626526" expanded="true" signature="47:527" ph=" = ..." />
+            <marker date="1539944626526" expanded="true" signature="52:527" ph="[ ..." />
+            <marker date="1539944626526" expanded="true" signature="539:1228" ph=" = ..." />
+            <marker date="1539944626526" expanded="true" signature="544:1228" ph="[ ..." />
+            <marker date="1539944626526" expanded="true" signature="1239:2139" ph=" = ..." />
+            <marker date="1539944626526" expanded="true" signature="1244:2139" ph="[ ..." />
+            <marker date="1539944626526" expanded="true" signature="2157:2848" ph=" = ..." />
+            <marker date="1539944626526" expanded="true" signature="2162:2848" ph="[ ..." />
+            <marker date="1539944626526" expanded="true" signature="2860:3363" ph=" = ..." />
+            <marker date="1539944626526" expanded="true" signature="2865:3363" ph="[ ..." />
+            <marker date="1539944626526" expanded="true" signature="3390:3831" ph=" = ..." />
+            <marker date="1539944626526" expanded="true" signature="3403:3761" ph=" = ..." />
+            <marker date="1539944626526" expanded="true" signature="3410:3761" ph="[ ..." />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/Step1/Program1.fs">
+      <provider selected="true" editor-type-id="text-editor">
+        <state>
+          <caret line="26" column="14" selection-start-line="26" selection-start-column="14" selection-end-line="26" selection-end-column="14" />
+          <folding>
+            <marker date="1539373062760" expanded="true" signature="31:2108" ph=" = ..." />
+            <marker date="1539373062760" expanded="false" signature="42:82" ph="..." />
+            <marker date="1539373062760" expanded="true" signature="159:397" ph="= ..." />
+            <marker date="1539373062760" expanded="true" signature="165:397" ph="| Append_Flavour_sold_Vanilla ..." />
+            <marker date="1539373062760" expanded="true" signature="415:1495" ph=" = ..." />
+            <marker date="1539373062760" expanded="true" signature="520:1489" ph=" -&gt; ..." />
+            <marker date="1539373062760" expanded="true" signature="553:1466" ph=" = ..." />
+            <marker date="1539373062760" expanded="true" signature="571:1465" ph=" ..." />
+            <marker date="1539373062760" expanded="true" signature="634:1456" ph=" ..." />
+            <marker date="1539373062760" expanded="true" signature="674:770" ph=" -&gt; ..." />
+            <marker date="1539373062760" expanded="true" signature="814:914" ph=" -&gt; ..." />
+            <marker date="1539373062760" expanded="true" signature="980:1118" ph=" -&gt; ..." />
+            <marker date="1539373062760" expanded="true" signature="1147:1233" ph=" -&gt; ..." />
+            <marker date="1539373062760" expanded="true" signature="1265:1456" ph=" -&gt; ..." />
+            <marker date="1539373062760" expanded="true" signature="1565:1616" ph=" = ..." />
+            <marker date="1539373062760" expanded="true" signature="1688:1742" ph=" = ..." />
+            <marker date="1539373062760" expanded="true" signature="1836:1912" ph=" = ..." />
+            <marker date="1539373062760" expanded="true" signature="1963:2004" ph=" = ..." />
+            <marker date="1539373062760" expanded="true" signature="2064:2108" ph=" = ..." />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/Step4/Tests4.fs">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="180">
+          <caret line="15" selection-start-line="15" selection-end-line="15" />
+          <folding>
+            <marker date="1541768948825" expanded="true" signature="29:1266" ph=" = ..." />
+            <marker date="1541768948825" expanded="false" signature="40:89" ph="..." />
+            <marker date="1541768948825" expanded="true" signature="134:155" ph=" = ..." />
+            <marker date="1541768948825" expanded="true" signature="189:261" ph=" = ..." />
+            <marker date="1541768948825" expanded="true" signature="274:1266" ph=" = ..." />
+            <marker date="1541768948825" expanded="true" signature="311:1265" ph=" ..." />
+            <marker date="1541768948825" expanded="true" signature="341:599" ph=" ..." />
+            <marker date="1541768948825" expanded="true" signature="357:499" ph=" ..." />
+            <marker date="1541768948825" expanded="true" signature="371:498" ph=" ..." />
+            <marker date="1541768948825" expanded="true" signature="643:1093" ph=" ..." />
+            <marker date="1541768948825" expanded="true" signature="659:975" ph=" ..." />
+            <marker date="1541768948825" expanded="true" signature="673:974" ph=" ..." />
+            <marker date="1541768948825" expanded="true" signature="1130:1257" ph=" ..." />
+          </folding>
+        </state>
+      </provider>
+    </entry>
   </component>
 </project>

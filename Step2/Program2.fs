@@ -291,7 +291,7 @@ module Program =
 // }
 
 
-// business logic
+// business logic3
 
 // restock_falsch
 // let restock flavour number stock =
@@ -307,3 +307,29 @@ module Program =
 //   |> Map.tryFind flavour
 //   |> Option.defaultValue 0
 //   |> fun portions -> stock |> Map.add flavour (portions + number)
+
+
+
+//business logic4
+// module Behaviour =
+
+//   let sellFlavour flavour : EventProducer<Event> =
+//     // nothing changed
+
+
+// module Program =
+
+//   let sellFlavour truck flavour (eventStore : EventStore<Event>) =
+//     eventStore.Evolve (truck,(Behaviour.sellFlavour flavour))
+
+//   [<EntryPoint>]
+//   let main _ =
+
+//     let eventStore = // initialize EventStore
+
+//     let truck1 = System.Guid.NewGuid()
+//     let truck2 = System.Guid.NewGuid()
+
+//     sellFlavour truck1 Vanilla eventStore
+
+//     sellFlavour truck2 Vanilla eventStore

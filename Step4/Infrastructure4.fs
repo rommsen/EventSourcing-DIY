@@ -2,15 +2,12 @@ namespace Step4.Infrastructure
 
 type Aggregate = System.Guid
 
-type Events<'Event> =
-  Map<Aggregate,'Event list>
-
 type EventProducer<'Event> =
   'Event list -> 'Event list
 
 type EventStore<'Event> =
   {
-    Get : unit -> Events<'Event>
+    Get : unit -> Map<Aggregate,'Event list>
     GetStream : Aggregate -> 'Event list
     Append : Aggregate -> 'Event list -> unit
     Evolve : Aggregate -> EventProducer<'Event> -> unit
@@ -26,7 +23,7 @@ type Projection<'State,'Event> =
 module EventStore =
 
   type Msg<'Event> =
-    | Get of AsyncReplyChannel<Events<'Event>>
+    | Get of AsyncReplyChannel<Map<Aggregate,'Event list>>
     | GetStream of Aggregate * AsyncReplyChannel<'Event list>
     | Append of  Aggregate * 'Event list
     | Evolve of Aggregate * EventProducer<'Event>

@@ -4,3 +4,4 @@ nuget Expecto
 nuget Expecto.BenchmarkDotNet
 nuget Expecto.FsCheck
 nuget Expecto.Hopac
+nuget Expecto.VisualStudio.TestAdapter version_in_path: true
