@@ -6,6 +6,12 @@ module Infrastructure =
       Append : 'Event list -> unit
     }
 
+  type Projection<'State,'Event> =
+    {
+      Init : 'State
+      Update : 'State -> 'Event -> 'State
+    }
+
 
    module EventStore =
 
@@ -58,14 +64,45 @@ module Domain =
     | Flavour_was_not_in_stock of Flavour
 
 
+module Projections =
+
+  open Infrastructure
+  open Domain
+
+  let project projection events =
+    events |> List.fold projection.Update projection.Init
+
+  let private updateSoldFlavours state event =
+    match event with
+    | Flavour_sold flavour ->
+        state
+        |> Map.tryFind flavour
+        |> Option.defaultValue 0
+        |> fun portions -> state |> Map.add flavour (portions + 1)
+
+    | _ ->
+        state
+
+  let soldFlavours : Projection<Map<Flavour,int>, Event> =
+    {
+      Init = Map.empty
+      Update = updateSoldFlavours
+    }
+
+
 
 module Program =
   open Infrastructure
   open Domain
+  open Projections
 
   let eventStore : EventStore<Event> = EventStore.initialize()
 
-  eventStore.Append [Flavour_restocked (Vanilla,42)]
+  eventStore.Append [Flavour_sold Vanilla]
+  eventStore.Append [Flavour_sold Strawberry ]
+  eventStore.Append [Flavour_sold Strawberry ; Flavour_went_out_of_stock Strawberry]
 
-  let bla = eventStore.Get()
 
+  eventStore.Get()
+  |> project soldFlavours
+  |> printfn "%A"
