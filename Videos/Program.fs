@@ -1,12 +1,9 @@
 module Infrastructure =
 
-  type Events<'Event> =
-    'Event list
-
   type EventStore<'Event> =
     {
-      Get : unit -> Events<'Event>
-      Append : Events<'Event> -> unit
+      Get : unit -> 'Event list
+      Append : 'Event list -> unit
     }
 
   type Projection<'State,'Event> =
@@ -15,11 +12,12 @@ module Infrastructure =
       Update : 'State -> 'Event -> 'State
     }
 
+
    module EventStore =
 
     type Msg<'Event> =
       | Get of AsyncReplyChannel<'Event list>
-      | Append of Events<'Event>
+      | Append of 'Event list
 
     let initialize () : EventStore<'Event> =
       let history = []
@@ -66,20 +64,83 @@ module Domain =
     | Flavour_was_not_in_stock of Flavour
 
 
+module Projections =
+
+  open Infrastructure
+  open Domain
+
+  let project projection events =
+    events |> List.fold projection.Update projection.Init
+
+  let private updateSoldFlavours state event =
+    match event with
+    | Flavour_sold flavour ->
+        state
+        |> Map.tryFind flavour
+        |> Option.defaultValue 0
+        |> fun portions -> state |> Map.add flavour (portions + 1)
+
+    | _ ->
+        state
+
+  let soldFlavours : Projection<Map<Flavour,int>, Event> =
+    {
+      Init = Map.empty
+      Update = updateSoldFlavours
+    }
+
+module Helper =
+  let printUl list =
+    list
+    |> List.iteri (fun i item -> printfn " %i: %A" (i+1) item)
+
+  let printEvents  events =
+    events
+    |> List.length
+    |> printfn "History (Length: %i)"
+
+    events |> printUl
+
+
+  let soldOfFlavour flavour state =
+    state
+    |> Map.tryFind flavour
+    |> Option.defaultValue 0
+
+
+  let printSoldFlavour flavour state =
+    state
+    |> soldOfFlavour flavour
+    |> printfn "Sold %A: %i" flavour
+
 
 open Infrastructure
 open Domain
+open Projections
+open Helper
 
 [<EntryPoint>]
 let main _ =
 
   let eventStore : EventStore<Event> = EventStore.initialize()
 
-  eventStore.Append [Flavour_restocked (Vanilla,42)]
-  eventStore.Append [Flavour_went_out_of_stock Vanilla]
+  eventStore.Append [Flavour_restocked (Vanilla,3)]
+
+  eventStore.Append [Flavour_sold Vanilla]
+  eventStore.Append [Flavour_sold Vanilla]
+  eventStore.Append [Flavour_sold Vanilla ; Flavour_went_out_of_stock Vanilla]
+
 
   let events = eventStore.Get()
 
-  printfn "\n\n\nEvents:\n %A\n\n\n" events
+  events
+  |> printEvents
+
+  let sold =
+    events
+    |> project soldFlavours
+
+  printSoldFlavour Vanilla sold
+  printSoldFlavour Strawberry sold
 
   0

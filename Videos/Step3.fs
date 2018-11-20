@@ -153,6 +153,64 @@ module Behaviour =
     [ Flavour_restocked (flavour,portions) ]
 
 
+module Helper =
+  let printUl list =
+    list
+    |> List.iteri (fun i item -> printfn " %i: %A" (i+1) item)
+
+  let printEvents  events =
+    events
+    |> List.length
+    |> printfn "History (Length: %i)"
+
+    events |> printUl
+
+  let soldOfFlavour flavour state =
+    state
+    |> Map.tryFind flavour
+    |> Option.defaultValue 0
+
+  let printSoldFlavour flavour state =
+    state
+    |> soldOfFlavour flavour
+    |> printfn "Sold %A: %i" flavour
+
+
+
+open Infrastructure
+open Domain
+open Projections
+open Helper
+
+[<EntryPoint>]
+let main _ =
+
+  let eventStore : EventStore<Event> = EventStore.initialize()
+
+  eventStore.Append [Flavour_restocked (Vanilla,3)]
+
+  eventStore.Append [Flavour_sold Vanilla]
+  eventStore.Append [Flavour_sold Vanilla]
+  eventStore.Append [Flavour_sold Vanilla ; Flavour_went_out_of_stock Vanilla]
+
+
+  let events = eventStore.Get()
+
+  events
+  |> printEvents
+
+  let sold =
+    events
+    |> project soldFlavours
+
+  printSoldFlavour Vanilla sold
+  printSoldFlavour Strawberry sold
+
+
+
+
+
+
 
 module Program =
   open Infrastructure
