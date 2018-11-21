@@ -1,9 +1,13 @@
 module Infrastructure =
 
+  type EventProducer<'Event> =
+    'Event list -> 'Event list
+
   type EventStore<'Event> =
     {
       Get : unit -> 'Event list
       Append : 'Event list -> unit
+      Evolve : EventProducer<'Event> -> unit
     }
 
   type Projection<'State,'Event> =
@@ -13,11 +17,12 @@ module Infrastructure =
     }
 
 
-   module EventStore =
+  module EventStore =
 
     type Msg<'Event> =
       | Get of AsyncReplyChannel<'Event list>
       | Append of 'Event list
+      | Evolve of EventProducer<'Event>
 
     let initialize () : EventStore<'Event> =
       let history = []
@@ -35,6 +40,9 @@ module Infrastructure =
 
               | Append events  ->
                   return! loop (history @ events)
+
+              | Evolve producer ->
+                  return! loop (history @ producer history)
             }
 
           loop history
@@ -45,9 +53,15 @@ module Infrastructure =
         |> Append
         |> mailbox.Post
 
+      let evolve producer =
+        producer
+        |> Evolve
+        |> mailbox.Post
+
       {
         Get = fun () ->  mailbox.PostAndReply Get
         Append = append
+        Evolve = evolve
       }
 
 
@@ -66,8 +80,8 @@ module Domain =
 
 module Projections =
 
-  open Infrastructure
   open Domain
+  open Infrastructure
 
   let project projection events =
     events |> List.fold projection.Update projection.Init
@@ -89,7 +103,60 @@ module Projections =
       Update = updateSoldFlavours
     }
 
+  let restock flavour number stock =
+    stock
+    |> Map.tryFind flavour
+    |> Option.map (fun portions -> stock |> Map.add flavour (portions + number))
+    |> Option.defaultValue stock
+
+  let updateFlavoursInStock stock event =
+    match event with
+    | Flavour_sold flavour ->
+        stock |> restock flavour -1
+
+    | Flavour_restocked (flavour, portions) ->
+        stock |> restock flavour portions
+
+    | _ ->
+        stock
+
+  let flavoursInStock : Projection<Map<Flavour, int>, Event> =
+    {
+      Init = Map.empty
+      Update = updateFlavoursInStock
+    }
+
+  let stockOf flavour stock =
+    stock
+    |> Map.tryFind flavour
+    |> Option.defaultValue 0
+
+
+module Behaviour =
+
+  open Domain
+  open Projections
+
+  let sellFlavour flavour events =
+    let stock =
+      events
+      |> project flavoursInStock
+      |> stockOf flavour
+
+    match stock with
+    | 0 -> [Flavour_was_not_in_stock flavour]
+    | 1 -> [Flavour_sold flavour ; Flavour_went_out_of_stock flavour]
+    | _ -> [Flavour_sold flavour]
+
+
+  let restock flavour portions events =
+    [ Flavour_restocked (flavour,portions) ]
+
+
 module Helper =
+
+  open Projections
+
   let printUl list =
     list
     |> List.iteri (fun i item -> printfn " %i: %A" (i+1) item)
@@ -101,17 +168,23 @@ module Helper =
 
     events |> printUl
 
-
   let soldOfFlavour flavour state =
     state
     |> Map.tryFind flavour
     |> Option.defaultValue 0
 
-
   let printSoldFlavour flavour state =
     state
     |> soldOfFlavour flavour
     |> printfn "Sold %A: %i" flavour
+
+
+  // neu
+  let printStockOf flavour state =
+    state
+    |> stockOf flavour
+    |> printfn "Stock of %A: %i" flavour
+
 
 
 open Infrastructure
@@ -124,12 +197,9 @@ let main _ =
 
   let eventStore : EventStore<Event> = EventStore.initialize()
 
-  eventStore.Append [Flavour_restocked (Vanilla,3)]
-
-  eventStore.Append [Flavour_sold Vanilla]
-  eventStore.Append [Flavour_sold Vanilla]
-  eventStore.Append [Flavour_sold Vanilla ; Flavour_went_out_of_stock Vanilla]
-
+  eventStore.Evolve (Behaviour.sellFlavour Vanilla)
+  eventStore.Evolve (Behaviour.sellFlavour Strawberry)
+  eventStore.Evolve (Behaviour.restock Vanilla 5)
 
   let events = eventStore.Get()
 
@@ -142,5 +212,10 @@ let main _ =
 
   printSoldFlavour Vanilla sold
   printSoldFlavour Strawberry sold
+
+  let flavours =
+    events |> project flavoursInStock
+
+  printStockOf Vanilla flavours
 
   0

@@ -154,6 +154,9 @@ module Behaviour =
 
 
 module Helper =
+
+  open Projections
+
   let printUl list =
     list
     |> List.iteri (fun i item -> printfn " %i: %A" (i+1) item)
@@ -176,6 +179,13 @@ module Helper =
     |> printfn "Sold %A: %i" flavour
 
 
+  // neu
+  let printStockOf flavour state =
+    state
+    |> stockOf flavour
+    |> printfn "Stock of %A: %i" flavour
+
+
 
 open Infrastructure
 open Domain
@@ -187,45 +197,34 @@ let main _ =
 
   let eventStore : EventStore<Event> = EventStore.initialize()
 
-  eventStore.Append [Flavour_restocked (Vanilla,3)]
+  eventStore.Evolve (Behaviour.sellFlavour Vanilla)
+  eventStore.Evolve (Behaviour.sellFlavour Strawberry)
+  // events zeigen
+  // stock of zeigen
 
-  eventStore.Append [Flavour_sold Vanilla]
-  eventStore.Append [Flavour_sold Vanilla]
-  eventStore.Append [Flavour_sold Vanilla ; Flavour_went_out_of_stock Vanilla]
+  eventStore.Evolve (Behaviour.restock Vanilla 5)
 
+  // events zeigen
+
+  eventStore.Evolve (Behaviour.sellFlavour Vanilla)
+
+  // hier uups
+
+  // dann wieder stockOf zeigen
 
   let events = eventStore.Get()
 
-  events
-  |> printEvents
+  events |> printEvents
 
   let sold =
-    events
-    |> project soldFlavours
+    events |> project soldFlavours
 
   printSoldFlavour Vanilla sold
   printSoldFlavour Strawberry sold
 
+  let flavours =
+    events |> project flavoursInStock
 
+  printStockOf Vanilla flavours
 
-
-
-
-
-module Program =
-  open Infrastructure
-  open Domain
-  open Projections
-
-  let eventStore : EventStore<Event> = EventStore.initialize()
-
-  eventStore.Evolve (Behaviour.sellFlavour flavour)
-
-  eventStore.Evolve (Behaviour.restock flavour portions)
-
-  // todo events zeigen, äh warum falsch
-
-  eventStore.Get()
-  |> project flavoursInStock
-  |> stockOf Vanilla
-  |> printfn "%A"
+  0
