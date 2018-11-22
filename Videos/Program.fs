@@ -103,11 +103,18 @@ module Projections =
       Update = updateSoldFlavours
     }
 
+  // to change
+  // let restock flavour number stock =
+  //   stock
+  //   |> Map.tryFind flavour
+  //   |> Option.map (fun portions -> stock |> Map.add flavour (portions + number))
+  //   |> Option.defaultValue stock
+
   let restock flavour number stock =
     stock
     |> Map.tryFind flavour
-    |> Option.map (fun portions -> stock |> Map.add flavour (portions + number))
-    |> Option.defaultValue stock
+    |> Option.defaultValue 0
+    |> fun portions -> stock |> Map.add flavour (portions + number)
 
   let updateFlavoursInStock stock event =
     match event with
@@ -152,9 +159,60 @@ module Behaviour =
   let restock flavour portions events =
     [ Flavour_restocked (flavour,portions) ]
 
+module Tests =
+
+  open Expecto
+  open Expecto.Expect
+  open Domain
+
+  let Given = id
+
+  let When handler events =
+    handler events
+
+  let Then expectedEvents events =
+    equal events expectedEvents "Events should equal expected events"
+
+  let tests =
+    testList "sellFlavour"
+      [
+        test "Flavour_sold" {
+          Given
+            [
+              Flavour_restocked (Vanilla,5)
+              Flavour_sold Vanilla
+              Flavour_sold Vanilla
+            ]
+          |> When (Behaviour.sellFlavour Vanilla)
+          |> Then [Flavour_sold Vanilla]
+        }
+
+        test "Flavour_was_not_in_stock" {
+          Given
+            [
+              Flavour_restocked (Vanilla,5)
+              Flavour_restocked (Strawberry,2)
+              Flavour_sold Vanilla
+              Flavour_sold Vanilla
+              Flavour_sold Strawberry
+              Flavour_sold Strawberry
+              Flavour_went_out_of_stock Strawberry
+            ]
+          |> When (Behaviour.sellFlavour Strawberry)
+          |> Then [Flavour_was_not_in_stock Strawberry]
+        }
+
+        test "Flavour_restocked" {
+          Given []
+          |> When (Behaviour.restock Vanilla 5 )
+          |> Then [Flavour_restocked (Vanilla,5)]
+        }
+      ]
+
 
 module Helper =
 
+  open Expecto
   open Projections
 
   let printUl list =
@@ -186,6 +244,10 @@ module Helper =
     |> printfn "Stock of %A: %i" flavour
 
 
+  let runTests () =
+    runTests defaultConfig Tests.tests |> ignore
+
+
 
 open Infrastructure
 open Domain
@@ -195,20 +257,24 @@ open Helper
 [<EntryPoint>]
 let main _ =
 
+  // erst tests zeigen, dann reparieren, dann wieder Tests
+  runTests ()
+
   let eventStore : EventStore<Event> = EventStore.initialize()
 
   eventStore.Evolve (Behaviour.sellFlavour Vanilla)
   eventStore.Evolve (Behaviour.sellFlavour Strawberry)
+
   eventStore.Evolve (Behaviour.restock Vanilla 5)
+
+  eventStore.Evolve (Behaviour.sellFlavour Vanilla)
 
   let events = eventStore.Get()
 
-  events
-  |> printEvents
+  events |> printEvents
 
   let sold =
-    events
-    |> project soldFlavours
+    events |> project soldFlavours
 
   printSoldFlavour Vanilla sold
   printSoldFlavour Strawberry sold

@@ -103,11 +103,18 @@ module Projections =
       Update = updateSoldFlavours
     }
 
+  // to change
+  // let restock flavour number stock =
+  //   stock
+  //   |> Map.tryFind flavour
+  //   |> Option.map (fun portions -> stock |> Map.add flavour (portions + number))
+  //   |> Option.defaultValue stock
+
   let restock flavour number stock =
     stock
     |> Map.tryFind flavour
-    |> Option.map (fun portions -> stock |> Map.add flavour (portions + number))
-    |> Option.defaultValue stock
+    |> Option.defaultValue 0
+    |> fun portions -> stock |> Map.add flavour (portions + number)
 
   let updateFlavoursInStock stock event =
     match event with
@@ -151,7 +158,6 @@ module Behaviour =
 
   let restock flavour portions events =
     [ Flavour_restocked (flavour,portions) ]
-
 
 module Tests =
 
@@ -204,25 +210,78 @@ module Tests =
       ]
 
 
+module Helper =
 
-module Program =
-  open Infrastructure
-  open Domain
+  open Expecto
   open Projections
 
-  // todo erstmal tests laufen lassen
-  // dann fixen
-  // dann tests laufen lassen
+  let printUl list =
+    list
+    |> List.iteri (fun i item -> printfn " %i: %A" (i+1) item)
+
+  let printEvents  events =
+    events
+    |> List.length
+    |> printfn "History (Length: %i)"
+
+    events |> printUl
+
+  let soldOfFlavour flavour state =
+    state
+    |> Map.tryFind flavour
+    |> Option.defaultValue 0
+
+  let printSoldFlavour flavour state =
+    state
+    |> soldOfFlavour flavour
+    |> printfn "Sold %A: %i" flavour
+
+
+  // neu
+  let printStockOf flavour state =
+    state
+    |> stockOf flavour
+    |> printfn "Stock of %A: %i" flavour
+
+
+  let runTests () =
+    runTests defaultConfig Tests.tests |> ignore
+
+
+
+open Infrastructure
+open Domain
+open Projections
+open Helper
+
+[<EntryPoint>]
+let main _ =
+
+  // erst tests zeigen, dann reparieren, dann wieder Tests
+  runTests ()
 
   let eventStore : EventStore<Event> = EventStore.initialize()
 
-  eventStore.Evolve (Behaviour.sellFlavour flavour)
+  eventStore.Evolve (Behaviour.sellFlavour Vanilla)
+  eventStore.Evolve (Behaviour.sellFlavour Strawberry)
 
-  eventStore.Evolve (Behaviour.restock flavour portions)
+  eventStore.Evolve (Behaviour.restock Vanilla 5)
 
-  // todo events zeigen, , jetzt sollte es richtig sein
+  eventStore.Evolve (Behaviour.sellFlavour Vanilla)
 
-  eventStore.Get()
-  |> project flavoursInStock
-  |> stockOf Vanilla
-  |> printfn "%A"
+  let events = eventStore.Get()
+
+  events |> printEvents
+
+  let sold =
+    events |> project soldFlavours
+
+  printSoldFlavour Vanilla sold
+  printSoldFlavour Strawberry sold
+
+  let flavours =
+    events |> project flavoursInStock
+
+  printStockOf Vanilla flavours
+
+  0
