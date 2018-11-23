@@ -1,3 +1,5 @@
+// we need to change the event store
+
 module Infrastructure =
 
   type Aggregate = System.Guid
@@ -141,8 +143,8 @@ module Projections =
   let restock flavour number stock =
     stock
     |> Map.tryFind flavour
-    |> Option.map (fun portions -> stock |> Map.add flavour (portions + number))
-    |> Option.defaultValue stock
+    |> Option.defaultValue 0
+    |> fun portions -> stock |> Map.add flavour (portions + number)
 
   let updateFlavoursInStock stock event =
     match event with
@@ -186,7 +188,6 @@ module Behaviour =
 
   let restock flavour portions events =
     [ Flavour_restocked (flavour,portions) ]
-
 
 module Tests =
 
@@ -239,25 +240,82 @@ module Tests =
       ]
 
 
+module Helper =
 
-module Program =
-  open Infrastructure
-  open Domain
+  open Expecto
   open Projections
+
+  let printUl list =
+    list
+    |> List.iteri (fun i item -> printfn " %i: %A" (i+1) item)
+
+  let printEvents header events =
+    events
+    |> List.length
+    |> printfn "History for %s (Length: %i)" header
+
+    events |> printUl
+
+
+  let printTotalHistory history =
+    history
+    |> Map.fold (fun length _ events -> length + (events |> List.length)) 0
+    |> printfn "Total History Length: %i"
+
+
+  let soldOfFlavour flavour state =
+    state
+    |> Map.tryFind flavour
+    |> Option.defaultValue 0
+
+  let printSoldFlavour flavour state =
+    state
+    |> soldOfFlavour flavour
+    |> printfn "Sold %A: %i" flavour
+
+  let printStockOf flavour state =
+    state
+    |> stockOf flavour
+    |> printfn "Stock of %A: %i" flavour
+
+
+  let runTests () =
+    runTests defaultConfig Tests.tests |> ignore
+
+
+
+open Infrastructure
+open Domain
+open Projections
+open Helper
+
+[<EntryPoint>]
+let main _ =
 
   let truck1 = System.Guid.NewGuid()
   let truck2 = System.Guid.NewGuid()
 
+  runTests ()
+
   let eventStore : EventStore<Event> = EventStore.initialize()
 
-  eventStore.Evolve truck1 (Behaviour.sellFlavour flavour)
+  eventStore.Evolve truck1 (Behaviour.sellFlavour Vanilla)
+  eventStore.Evolve truck1 (Behaviour.sellFlavour Strawberry)
+  eventStore.Evolve truck1 (Behaviour.restock Vanilla 5)
+  eventStore.Evolve truck1 (Behaviour.sellFlavour Vanilla)
 
-  eventStore.Evolve truck1 (Behaviour.restock flavour portions)
+  eventStore.Evolve truck2 (Behaviour.restock Strawberry 3)
+  eventStore.Evolve truck2 (Behaviour.sellFlavour Strawberry)
+  eventStore.Evolve truck2 (Behaviour.sellFlavour Strawberry)
+  eventStore.Evolve truck2 (Behaviour.sellFlavour Strawberry)
 
-  // todo events zeigen, , jetzt sollte es richtig sein
+  let events_truck_1 = eventStore.GetStream truck1
+  let events_truck_2 = eventStore.GetStream truck2
 
-  truck1
-  |> eventStore.GetStream
-  |> project flavoursInStock
-  |> stockOf Vanilla
-  |> printfn "%A"
+  events_truck_1 |> printEvents "Truck 1"
+  events_truck_2 |> printEvents "Truck 2"
+
+  eventStore.Get()
+  |> printTotalHistory
+
+  0

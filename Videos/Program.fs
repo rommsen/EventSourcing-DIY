@@ -1,13 +1,18 @@
+// we need to change the event store
+
 module Infrastructure =
+
+  type Aggregate = System.Guid
 
   type EventProducer<'Event> =
     'Event list -> 'Event list
 
   type EventStore<'Event> =
     {
-      Get : unit -> 'Event list
-      Append : 'Event list -> unit
-      Evolve : EventProducer<'Event> -> unit
+      Get : unit -> Map<Aggregate,'Event list>
+      GetStream : Aggregate -> 'Event list
+      Append : Aggregate -> 'Event list -> unit
+      Evolve : Aggregate -> EventProducer<'Event> -> unit
     }
 
   type Projection<'State,'Event> =
@@ -20,12 +25,13 @@ module Infrastructure =
   module EventStore =
 
     type Msg<'Event> =
-      | Get of AsyncReplyChannel<'Event list>
-      | Append of 'Event list
-      | Evolve of EventProducer<'Event>
+      | Get of AsyncReplyChannel<Map<Aggregate,'Event list>>
+      | GetStream of Aggregate * AsyncReplyChannel<'Event list>
+      | Append of  Aggregate * 'Event list
+      | Evolve of Aggregate * EventProducer<'Event>
 
     let initialize () : EventStore<'Event> =
-      let history = []
+      let history : Map<Aggregate,'Event> = Map.empty
 
       let mailbox =
         MailboxProcessor.Start(fun inbox ->
@@ -38,28 +44,59 @@ module Infrastructure =
                   reply.Reply history
                   return! loop history
 
-              | Append events  ->
-                  return! loop (history @ events)
+              | GetStream (aggregate,reply) ->
+                  history
+                  |> Map.tryFind aggregate
+                  |> Option.defaultValue []
+                  |> reply.Reply
 
-              | Evolve producer ->
-                  return! loop (history @ producer history)
+                  return! loop history
+
+              | Append (aggregate,events)  ->
+                  let stream_history =
+                    history
+                    |> Map.tryFind aggregate
+                    |> Option.defaultValue []
+
+                  return! loop (
+                      history
+                      |> Map.add aggregate (stream_history @ events))
+
+              | Evolve (aggregate,producer) ->
+                  let stream_history =
+                    history
+                    |> Map.tryFind aggregate
+                    |> Option.defaultValue []
+
+                  let events =
+                    stream_history
+                    |> producer
+
+                  return! loop (
+                      history
+                      |> Map.add aggregate (stream_history @ events)
+                  )
             }
 
           loop history
         )
 
-      let append events =
-        events
+      let getStream aggregate =
+        mailbox.PostAndReply (fun reply -> (aggregate,reply) |> GetStream)
+
+      let append aggregate events =
+        (aggregate,events)
         |> Append
         |> mailbox.Post
 
-      let evolve producer =
-        producer
+      let evolve aggregate producer =
+        (aggregate,producer)
         |> Evolve
         |> mailbox.Post
 
       {
         Get = fun () ->  mailbox.PostAndReply Get
+        GetStream = getStream
         Append = append
         Evolve = evolve
       }
@@ -102,13 +139,6 @@ module Projections =
       Init = Map.empty
       Update = updateSoldFlavours
     }
-
-  // to change
-  // let restock flavour number stock =
-  //   stock
-  //   |> Map.tryFind flavour
-  //   |> Option.map (fun portions -> stock |> Map.add flavour (portions + number))
-  //   |> Option.defaultValue stock
 
   let restock flavour number stock =
     stock
@@ -219,12 +249,19 @@ module Helper =
     list
     |> List.iteri (fun i item -> printfn " %i: %A" (i+1) item)
 
-  let printEvents  events =
+  let printEvents header events =
     events
     |> List.length
-    |> printfn "History (Length: %i)"
+    |> printfn "History for %s (Length: %i)" header
 
     events |> printUl
+
+
+  let printTotalHistory history =
+    history
+    |> Map.fold (fun length _ events -> length + (events |> List.length)) 0
+    |> printfn "Total History Length: %i"
+
 
   let soldOfFlavour flavour state =
     state
@@ -236,8 +273,6 @@ module Helper =
     |> soldOfFlavour flavour
     |> printfn "Sold %A: %i" flavour
 
-
-  // neu
   let printStockOf flavour state =
     state
     |> stockOf flavour
@@ -257,31 +292,30 @@ open Helper
 [<EntryPoint>]
 let main _ =
 
-  // erst tests zeigen, dann reparieren, dann wieder Tests
+  let truck1 = System.Guid.NewGuid()
+  let truck2 = System.Guid.NewGuid()
+
   runTests ()
 
   let eventStore : EventStore<Event> = EventStore.initialize()
 
-  eventStore.Evolve (Behaviour.sellFlavour Vanilla)
-  eventStore.Evolve (Behaviour.sellFlavour Strawberry)
+  eventStore.Evolve truck1 (Behaviour.sellFlavour Vanilla)
+  eventStore.Evolve truck1 (Behaviour.sellFlavour Strawberry)
+  eventStore.Evolve truck1 (Behaviour.restock Vanilla 5)
+  eventStore.Evolve truck1 (Behaviour.sellFlavour Vanilla)
 
-  eventStore.Evolve (Behaviour.restock Vanilla 5)
+  eventStore.Evolve truck2 (Behaviour.restock Strawberry 3)
+  eventStore.Evolve truck2 (Behaviour.sellFlavour Strawberry)
+  eventStore.Evolve truck2 (Behaviour.sellFlavour Strawberry)
+  eventStore.Evolve truck2 (Behaviour.sellFlavour Strawberry)
 
-  eventStore.Evolve (Behaviour.sellFlavour Vanilla)
+  eventStore.Get()
+  |> printTotalHistory
 
-  let events = eventStore.Get()
+  let events_truck_1 = eventStore.GetStream truck1
+  let events_truck_2 = eventStore.GetStream truck2
 
-  events |> printEvents
-
-  let sold =
-    events |> project soldFlavours
-
-  printSoldFlavour Vanilla sold
-  printSoldFlavour Strawberry sold
-
-  let flavours =
-    events |> project flavoursInStock
-
-  printStockOf Vanilla flavours
+  events_truck_1 |> printEvents "Truck 1"
+  events_truck_2 |> printEvents "Truck 2"
 
   0
