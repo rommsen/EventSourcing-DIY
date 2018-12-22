@@ -1,4 +1,4 @@
-module Infrastructure =
+module EventStore =
 
   type EventProducer<'Event> =
     'Event list -> 'Event list
@@ -10,59 +10,50 @@ module Infrastructure =
       Evolve : EventProducer<'Event> -> unit
     }
 
-  type Projection<'State,'Event> =
+  type Msg<'Event> =
+    | Get of AsyncReplyChannel<'Event list>
+    | Append of 'Event list
+    | Evolve of EventProducer<'Event>
+
+  let initialize () : EventStore<'Event> =
+    let history = []
+
+    let mailbox =
+      MailboxProcessor.Start(fun inbox ->
+        let rec loop history =
+          async {
+            let! msg = inbox.Receive()
+
+            match msg with
+            | Get reply ->
+                reply.Reply history
+                return! loop history
+
+            | Append events  ->
+                return! loop (history @ events)
+
+            | Evolve producer ->
+                return! loop (history @ producer history)
+          }
+
+        loop history
+      )
+
+    let append events =
+      events
+      |> Append
+      |> mailbox.Post
+
+    let evolve producer =
+      producer
+      |> Evolve
+      |> mailbox.Post
+
     {
-      Init : 'State
-      Update : 'State -> 'Event -> 'State
+      Get = fun () ->  mailbox.PostAndReply Get
+      Append = append
+      Evolve = evolve
     }
-
-
-  module EventStore =
-
-    type Msg<'Event> =
-      | Get of AsyncReplyChannel<'Event list>
-      | Append of 'Event list
-      | Evolve of EventProducer<'Event>
-
-    let initialize () : EventStore<'Event> =
-      let history = []
-
-      let mailbox =
-        MailboxProcessor.Start(fun inbox ->
-          let rec loop history =
-            async {
-              let! msg = inbox.Receive()
-
-              match msg with
-              | Get reply ->
-                  reply.Reply history
-                  return! loop history
-
-              | Append events  ->
-                  return! loop (history @ events)
-
-              | Evolve producer ->
-                  return! loop (history @ producer history)
-            }
-
-          loop history
-        )
-
-      let append events =
-        events
-        |> Append
-        |> mailbox.Post
-
-      let evolve producer =
-        producer
-        |> Evolve
-        |> mailbox.Post
-
-      {
-        Get = fun () ->  mailbox.PostAndReply Get
-        Append = append
-        Evolve = evolve
-      }
 
 
 module Domain =
@@ -81,17 +72,26 @@ module Domain =
 module Projections =
 
   open Domain
-  open Infrastructure
+
+  type Projection<'State,'Event> =
+    {
+      Init : 'State
+      Update : 'State -> 'Event -> 'State
+    }
 
   let project projection events =
     events |> List.fold projection.Update projection.Init
+
+  let soldOfFlavour flavour state =
+    state
+    |> Map.tryFind flavour
+    |> Option.defaultValue 0  
 
   let private updateSoldFlavours state event =
     match event with
     | Flavour_sold flavour ->
         state
-        |> Map.tryFind flavour
-        |> Option.defaultValue 0
+        |> soldOfFlavour flavour
         |> fun portions -> state |> Map.add flavour (portions + 1)
 
     | _ ->
@@ -226,11 +226,6 @@ module Helper =
 
     events |> printUl
 
-  let soldOfFlavour flavour state =
-    state
-    |> Map.tryFind flavour
-    |> Option.defaultValue 0
-
   let printSoldFlavour flavour state =
     state
     |> soldOfFlavour flavour
@@ -249,7 +244,7 @@ module Helper =
 
 
 
-open Infrastructure
+open EventStore
 open Domain
 open Projections
 open Helper

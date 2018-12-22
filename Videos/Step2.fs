@@ -1,4 +1,4 @@
-module Infrastructure =
+module EventStore =
 
   type EventStore<'Event> =
     {
@@ -6,49 +6,40 @@ module Infrastructure =
       Append : 'Event list -> unit
     }
 
-  type Projection<'State,'Event> =
+  type Msg<'Event> =
+    | Get of AsyncReplyChannel<'Event list>
+    | Append of 'Event list
+
+  let initialize () : EventStore<'Event> =
+    let history = []
+
+    let mailbox =
+      MailboxProcessor.Start(fun inbox ->
+        let rec loop history =
+          async {
+            let! msg = inbox.Receive()
+
+            match msg with
+            | Get reply ->
+                reply.Reply history
+                return! loop history
+
+            | Append events  ->
+                return! loop (history @ events)
+          }
+
+        loop history
+      )
+
+    let append events =
+      events
+      |> Append
+      |> mailbox.Post
+
     {
-      Init : 'State
-      Update : 'State -> 'Event -> 'State
+      Get = fun () ->  mailbox.PostAndReply Get
+      Append = append
     }
-
-
-   module EventStore =
-
-    type Msg<'Event> =
-      | Get of AsyncReplyChannel<'Event list>
-      | Append of 'Event list
-
-    let initialize () : EventStore<'Event> =
-      let history = []
-
-      let mailbox =
-        MailboxProcessor.Start(fun inbox ->
-          let rec loop history =
-            async {
-              let! msg = inbox.Receive()
-
-              match msg with
-              | Get reply ->
-                  reply.Reply history
-                  return! loop history
-
-              | Append events  ->
-                  return! loop (history @ events)
-            }
-
-          loop history
-        )
-
-      let append events =
-        events
-        |> Append
-        |> mailbox.Post
-
-      {
-        Get = fun () ->  mailbox.PostAndReply Get
-        Append = append
-      }
 
 
 module Domain =
@@ -66,8 +57,13 @@ module Domain =
 
 module Projections =
 
-  open Infrastructure
   open Domain
+
+  type Projection<'State,'Event> =
+    {
+      Init : 'State
+      Update : 'State -> 'Event -> 'State
+    }
 
   let project projection events =
     events |> List.fold projection.Update projection.Init
@@ -114,8 +110,8 @@ module Helper =
     |> printfn "Sold %A: %i" flavour
 
 
-open Infrastructure
 open Domain
+open EventStore
 open Projections
 open Helper
 
