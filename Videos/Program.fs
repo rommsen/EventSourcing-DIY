@@ -1,11 +1,13 @@
-// we need to change the event store
-
-module Infrastructure =
+module EventStore =
 
   type Aggregate = System.Guid
 
   type EventProducer<'Event> =
     'Event list -> 'Event list
+
+  type EventSubscription<'Event> = 
+    Aggregate -> 'Event list -> unit
+  
 
   type EventStore<'Event> =
     {
@@ -13,93 +15,123 @@ module Infrastructure =
       GetStream : Aggregate -> 'Event list
       Append : Aggregate -> 'Event list -> unit
       Evolve : Aggregate -> EventProducer<'Event> -> unit
+      Subscribe : EventSubscription<'Event>-> unit
     }
 
-  type Projection<'State,'Event> =
-    {
-      Init : 'State
-      Update : 'State -> 'Event -> 'State
-    }
+  type Msg<'Event> =
+    | Get of AsyncReplyChannel<Map<Aggregate,'Event list>>
+    | GetStream of Aggregate * AsyncReplyChannel<'Event list>
+    | Append of  Aggregate * 'Event list
+    | Evolve of Aggregate * EventProducer<'Event>
+    | Subscribe of EventSubscription<'Event>
 
 
-  module EventStore =
+  let streamFor aggregate history =
+    history
+    |> Map.tryFind aggregate
+    |> Option.defaultValue []  
 
-    type Msg<'Event> =
-      | Get of AsyncReplyChannel<Map<Aggregate,'Event list>>
-      | GetStream of Aggregate * AsyncReplyChannel<'Event list>
-      | Append of  Aggregate * 'Event list
-      | Evolve of Aggregate * EventProducer<'Event>
 
-    let initialize () : EventStore<'Event> =
-      let history : Map<Aggregate,'Event> = Map.empty
+  let appendFor aggregate history new_events stream_history =
+    history |> Map.add aggregate (stream_history @ new_events)
 
-      let mailbox =
-        MailboxProcessor.Start(fun inbox ->
-          let rec loop history =
-            async {
-              let! msg = inbox.Receive()
+  let notifySubscriber aggregate events subscriber = 
+    events |> subscriber aggregate
 
-              match msg with
-              | Get reply ->
-                  reply.Reply history
-                  return! loop history
+  let notifySubscribers aggregate new_events subscriptions =
+    subscriptions |> List.iter (notifySubscriber aggregate new_events)
 
-              | GetStream (aggregate,reply) ->
+
+  let initialize () : EventStore<'Event> =
+    let history : Map<Aggregate,'Event> = Map.empty
+
+    let mailbox =
+      MailboxProcessor.Start(fun inbox ->
+        let rec loop (history,subscriptions : EventSubscription<'Event> list) =
+          async {
+            let! msg = inbox.Receive()
+
+            match msg with
+            | Get reply ->
+                reply.Reply history
+                return! loop (history,subscriptions)
+
+            | GetStream (aggregate,reply) ->
+                history
+                |> streamFor aggregate
+                |> reply.Reply
+
+                return! loop (history,subscriptions)
+
+            | Append (aggregate,events)  ->
+                let new_history =
                   history
-                  |> Map.tryFind aggregate
-                  |> Option.defaultValue []
-                  |> reply.Reply
+                  |> streamFor aggregate
+                  |> appendFor aggregate history events
 
-                  return! loop history
+                return! loop (new_history, subscriptions)
 
-              | Append (aggregate,events)  ->
-                  let stream_history =
-                    history
-                    |> Map.tryFind aggregate
-                    |> Option.defaultValue []
+            | Evolve (aggregate,producer) ->
+                let stream_history =
+                  history |> streamFor aggregate
 
-                  return! loop (
-                      history
-                      |> Map.add aggregate (stream_history @ events))
+                let new_events =
+                  stream_history |> producer
 
-              | Evolve (aggregate,producer) ->
-                  let stream_history =
-                    history
-                    |> Map.tryFind aggregate
-                    |> Option.defaultValue []
+                let newHistory =
+                  appendFor aggregate history new_events stream_history 
 
-                  let events =
-                    stream_history
-                    |> producer
+                do subscriptions |> notifySubscribers aggregate new_events           
 
-                  return! loop (
-                      history
-                      |> Map.add aggregate (stream_history @ events)
-                  )
-            }
+                return! loop (newHistory, subscriptions)
 
-          loop history
-        )
+            | Subscribe subscription ->
+                subscription |> notify
+                // Idee: gib möglichkeiten zum slicen mit
 
-      let getStream aggregate =
-        mailbox.PostAndReply (fun reply -> (aggregate,reply) |> GetStream)
+                return! loop (history, subscription :: subscriptions)
 
-      let append aggregate events =
-        (aggregate,events)
-        |> Append
-        |> mailbox.Post
+                
 
-      let evolve aggregate producer =
-        (aggregate,producer)
-        |> Evolve
-        |> mailbox.Post
+                // Frage wohin wir optimieren wollen?
+                // Zugriffe auf Streams?
+                // alle Events
+                // Memory?
 
-      {
-        Get = fun () ->  mailbox.PostAndReply Get
-        GetStream = getStream
-        Append = append
-        Evolve = evolve
-      }
+                // wenn alle Events dann möchte man sie schon in Order haben
+
+                // Eine Event Subscription braucht sie auf jeden Fall in der Order
+
+          }
+
+        loop (history,[])
+      )
+
+    let getStream aggregate =
+      mailbox.PostAndReply (fun reply -> (aggregate,reply) |> GetStream)
+
+    let append aggregate events =
+      (aggregate,events)
+      |> Append
+      |> mailbox.Post
+
+    let evolve aggregate producer =
+      (aggregate,producer)
+      |> Evolve
+      |> mailbox.Post
+
+    let subscribe (subscription : EventSubscription<_>) =
+      subscription
+      |> Subscribe
+      |> mailbox.Post    
+
+    {
+      Get = fun () ->  mailbox.PostAndReply Get
+      GetStream = getStream
+      Append = append
+      Evolve = evolve
+      Subscribe = subscribe
+    }
 
 
 module Domain =
@@ -118,17 +150,25 @@ module Domain =
 module Projections =
 
   open Domain
-  open Infrastructure
 
+  type Projection<'State,'Event> =
+    {
+      Init : 'State
+      Update : 'State -> 'Event -> 'State
+    }
   let project projection events =
     events |> List.fold projection.Update projection.Init
+
+  let soldOfFlavour flavour state =
+    state
+    |> Map.tryFind flavour
+    |> Option.defaultValue 0  
 
   let private updateSoldFlavours state event =
     match event with
     | Flavour_sold flavour ->
         state
-        |> Map.tryFind flavour
-        |> Option.defaultValue 0
+        |> soldOfFlavour flavour
         |> fun portions -> state |> Map.add flavour (portions + 1)
 
     | _ ->
@@ -167,6 +207,16 @@ module Projections =
     stock
     |> Map.tryFind flavour
     |> Option.defaultValue 0
+
+
+module ReadModels =
+  open Projections 
+
+  type ReadModel<'State, 'Event> =
+    {
+      Subscribe : 'Event list -> unit
+      Get : unit -> 'State
+    } 
 
 
 module Behaviour =
@@ -263,11 +313,6 @@ module Helper =
     |> printfn "Total History Length: %i"
 
 
-  let soldOfFlavour flavour state =
-    state
-    |> Map.tryFind flavour
-    |> Option.defaultValue 0
-
   let printSoldFlavour flavour state =
     state
     |> soldOfFlavour flavour
@@ -284,7 +329,7 @@ module Helper =
 
 
 
-open Infrastructure
+open EventStore
 open Domain
 open Projections
 open Helper
@@ -309,13 +354,13 @@ let main _ =
   eventStore.Evolve truck2 (Behaviour.sellFlavour Strawberry)
   eventStore.Evolve truck2 (Behaviour.sellFlavour Strawberry)
 
-  eventStore.Get()
-  |> printTotalHistory
-
   let events_truck_1 = eventStore.GetStream truck1
   let events_truck_2 = eventStore.GetStream truck2
 
   events_truck_1 |> printEvents "Truck 1"
   events_truck_2 |> printEvents "Truck 2"
+
+  eventStore.Get()
+  |> printTotalHistory
 
   0
