@@ -1,49 +1,65 @@
 module EventStore =
 
-  type Aggregate = System.Guid
+  type Stream = System.Guid
 
   type EventProducer<'Event> =
     'Event list -> 'Event list
 
+
+  type StreamEvent<'Event> =
+    {
+      Stream : Stream 
+      Event : 'Event
+    }  
+
   type EventSubscription<'Event> = 
-    Aggregate -> 'Event list -> unit
+    StreamEvent<'Event> list -> unit
   
 
   type EventStore<'Event> =
     {
-      Get : unit -> Map<Aggregate,'Event list>
-      GetStream : Aggregate -> 'Event list
-      Append : Aggregate -> 'Event list -> unit
-      Evolve : Aggregate -> EventProducer<'Event> -> unit
+      Get : unit -> StreamEvent<'Event> list
+      GetStream : Stream -> 'Event list
+      Append : Stream -> 'Event list -> unit
+      Evolve : Stream -> EventProducer<'Event> -> unit
       Subscribe : EventSubscription<'Event>-> unit
     }
 
   type Msg<'Event> =
-    | Get of AsyncReplyChannel<Map<Aggregate,'Event list>>
-    | GetStream of Aggregate * AsyncReplyChannel<'Event list>
-    | Append of  Aggregate * 'Event list
-    | Evolve of Aggregate * EventProducer<'Event>
+    | Get of AsyncReplyChannel<StreamEvent<'Event> list>
+    | GetStream of Stream * AsyncReplyChannel<'Event list>
+    | Append of  Stream * 'Event list
+    | Evolve of Stream * EventProducer<'Event>
     | Subscribe of EventSubscription<'Event>
 
 
-  let streamFor aggregate history =
+
+
+  let streamFor stream history =
     history
-    |> Map.tryFind aggregate
-    |> Option.defaultValue []  
+    |> List.filter (fun streamEvent -> streamEvent.Stream = stream)
+
+    
+  let asEvents streamEvents =
+    streamEvents 
+    |> List.map (fun streamEvent -> streamEvent.Event)
 
 
-  let appendFor aggregate history new_events stream_history =
-    history |> Map.add aggregate (stream_history @ new_events)
+  let asStreamEvents stream events =
+    events
+    |> List.map (fun event -> { Stream = stream ; Event = event })  
 
-  let notifySubscriber aggregate events subscriber = 
-    events |> subscriber aggregate
+  let appendFor stream history new_events stream_history =
+    new_events 
+    |> (@) stream_history
 
-  let notifySubscribers aggregate new_events subscriptions =
-    subscriptions |> List.iter (notifySubscriber aggregate new_events)
+  let notifySubscribers events subscriptions =
+    subscriptions 
+    |> List.iter (fun subscription -> events |> subscription)
 
 
   let initialize () : EventStore<'Event> =
-    let history : Map<Aggregate,'Event> = Map.empty
+    let history : StreamEvent<'Event> list = []
 
     let mailbox =
       MailboxProcessor.Start(fun inbox ->
@@ -56,51 +72,58 @@ module EventStore =
                 reply.Reply history
                 return! loop (history,subscriptions)
 
-            | GetStream (aggregate,reply) ->
+            | GetStream (stream,reply) ->
                 history
-                |> streamFor aggregate
+                |> streamFor stream
+                |> asEvents
                 |> reply.Reply
 
                 return! loop (history,subscriptions)
 
-            | Append (aggregate,events)  ->
+            | Append (stream,events)  ->
                 let new_history =
                   history
-                  |> streamFor aggregate
-                  |> appendFor aggregate history events
+                  |> streamFor stream
+                  |> appendFor stream history (events |> asStreamEvents stream)
 
                 return! loop (new_history, subscriptions)
 
-            | Evolve (aggregate,producer) ->
+            | Evolve (stream,producer) ->
                 let stream_history =
-                  history |> streamFor aggregate
+                  history |> streamFor stream
 
                 let new_events =
-                  stream_history |> producer
+                  stream_history 
+                  |> asEvents
+                  |> producer
+                  |> asStreamEvents stream
 
                 let newHistory =
-                  appendFor aggregate history new_events stream_history 
+                  appendFor stream history new_events stream_history 
 
-                do subscriptions |> notifySubscribers aggregate new_events           
+                do subscriptions |> notifySubscribers new_events           
 
                 return! loop (newHistory, subscriptions)
 
             | Subscribe subscription ->
-                subscription |> notify
-                // Idee: gib möglichkeiten zum slicen mit
+                do history |> subscription
+                
 
                 return! loop (history, subscription :: subscriptions)
 
-                
+                // Idee: gib möglichkeiten subscribern zum slicen mit
 
                 // Frage wohin wir optimieren wollen?
                 // Zugriffe auf Streams?
                 // alle Events
                 // Memory?
+                // es h#ngt davon ab wohin man optimieren möchte
 
                 // wenn alle Events dann möchte man sie schon in Order haben
 
                 // Eine Event Subscription braucht sie auf jeden Fall in der Order
+
+                // achtung Prototype: eventuell structs
 
           }
 
@@ -294,6 +317,7 @@ module Helper =
 
   open Expecto
   open Projections
+  open EventStore
 
   let printUl list =
     list
@@ -309,7 +333,7 @@ module Helper =
 
   let printTotalHistory history =
     history
-    |> Map.fold (fun length _ events -> length + (events |> List.length)) 0
+    |> List.length
     |> printfn "Total History Length: %i"
 
 
