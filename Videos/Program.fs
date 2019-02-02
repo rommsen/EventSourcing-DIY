@@ -13,7 +13,7 @@ module EventStore =
     }  
 
   type EventListener<'Event> = 
-    StreamEvent<'Event> list -> unit
+    StreamEvent<'Event> -> unit
   
 
   type EventStore<'Event> =
@@ -55,7 +55,7 @@ module EventStore =
 
   let notifySubscribers events subscriptions =
     subscriptions 
-    |> List.iter (fun subscription -> events |> subscription)
+    |> List.iter (fun subscription -> events |> List.iter subscription)
 
 
   let initialize () : EventStore<'Event> =
@@ -106,7 +106,7 @@ module EventStore =
                 return! loop (newHistory, subscriptions)
 
             | Subscribe subscription ->
-                do history |> subscription
+                do history |> List.iter subscription
                 
 
                 return! loop (history, subscription :: subscriptions)
@@ -292,14 +292,14 @@ module Readmodels =
 
 
 
-  // type Query =
-  //   | Trucks 
-  //   | FlavoursInStock of Truck
+  type Query =
+    | Trucks 
+    | FlavoursInStock of Truck * Flavour
 
-  type ReadModel<'State, 'Event, 'Query, 'Result> =
+  type ReadModel<'Event, 'Query, 'Result> =
     {
-      Notify : EventListener<'Event>
-      HandleQuery : QueryHandler<'Query,'Result>
+      EventListener : EventListener<'Event>
+      QueryHandler : QueryHandler<'Query,'Result>
     } 
 
     (*
@@ -310,36 +310,74 @@ module Readmodels =
       - projections für alle Streams
 
 
+      Ablauf:
+
+        - Wird gestartet
+        - Holt sich Events aus Event Store
+        - baut projection auf
+
+        - Events kommen an
+        - Readmodel entscheidet spezifisch wie es den state (für stream oder alle) holt (sql query, aus memory etc)
+        - Readmodel schickt state an projection
+        - projection generiert neuen State
+        - Readmodel hinterlegt state
+
+        - Query kommt an
+        - Readmodel prüft, ob es damit umgehen kann
+        - Readmodel entscheidet wie es damit umgeht
+        - gibt antwort zurück
     *)
 
-
-  // type Msg<'State, 'Event> =
-  //   | Notify of StreamEvent<'Event> list
-  //   | Get of AsyncReplyChannel<'State>
-
+  type Msg<'Event,'Query,'Result> =
+    | Notify of StreamEvent<'Event>
+    | Query of 'Query * AsyncReplyChannel<QueryResult<'Result>>
 
 
 
+  let flavoursInStock () =
+    let agent =
+      let initState : Map<Stream, Map<Flavour, int>> = Map.empty
 
-  // QueryHandler.query (flavoursInStock truck1)
+      MailboxProcessor.Start(fun inbox -> 
+        let rec loop state =
+          async {
+            let! msg = inbox.Receive() 
 
+            match msg with  
+            | Notify event ->
+                let newState =
+                  state
+                  |> Map.tryFind event.Stream
+                  |> Option.defaultValue Projections.flavoursInStock.Init
+                  |> fun projectionState -> event.Event |> Projections.flavoursInStock.Update projectionState
+                  |> fun newState -> state |> Map.add event.Stream newState
 
+                return! loop newState
 
+            | Query (query, reply) ->
+                let result =
+                  match query with  
+                  | FlavoursInStock (Truck truck, flavour) ->
+                      state 
+                      |> Map.tryFind truck
+                      |> Option.defaultValue Map.empty 
+                      |> Map.tryFind flavour 
+                      |> Option.defaultValue 0 
+                      |> Handled 
 
-  
-  // let readmodel (projection : Projection<'State, 'Event>) : ReadModel<'State, 'Event> =
-  //   let agent =
-  //     MailboxProcessor.Start(fun inbox -> 
-  //       let rec loop state =
-  //         async {
-  //           let! msg = inbox.Receive() 
+                   | _ -> 
+                      NotHandled
 
-  //           match msg with  
-  //           | Notify events ->
+                result |> reply.Reply                                  
+          }
 
-  //         }
-  //     )
+        loop initState        
+      )
 
+    {
+      EventListener = Notify >> agent.Post
+      QueryHandler = fun query -> agent.PostAndReply(fun reply -> Query (query,reply))
+    }    
 
 
 module Behaviour =
