@@ -12,7 +12,7 @@ module EventStore =
       Event : 'Event
     }  
 
-  type EventSubscription<'Event> = 
+  type EventListener<'Event> = 
     StreamEvent<'Event> list -> unit
   
 
@@ -22,7 +22,7 @@ module EventStore =
       GetStream : Stream -> 'Event list
       Append : Stream -> 'Event list -> unit
       Evolve : Stream -> EventProducer<'Event> -> unit
-      Subscribe : EventSubscription<'Event>-> unit
+      Subscribe : EventListener<'Event>-> unit
     }
 
   type Msg<'Event> =
@@ -30,7 +30,7 @@ module EventStore =
     | GetStream of Stream * AsyncReplyChannel<'Event list>
     | Append of  Stream * 'Event list
     | Evolve of Stream * EventProducer<'Event>
-    | Subscribe of EventSubscription<'Event>
+    | Subscribe of EventListener<'Event>
 
 
 
@@ -63,7 +63,7 @@ module EventStore =
 
     let mailbox =
       MailboxProcessor.Start(fun inbox ->
-        let rec loop (history,subscriptions : EventSubscription<'Event> list) =
+        let rec loop (history,subscriptions : EventListener<'Event> list) =
           async {
             let! msg = inbox.Receive()
 
@@ -143,7 +143,7 @@ module EventStore =
       |> Evolve
       |> mailbox.Post
 
-    let subscribe (subscription : EventSubscription<_>) =
+    let subscribe (subscription : EventListener<_>) =
       subscription
       |> Subscribe
       |> mailbox.Post    
@@ -168,6 +168,9 @@ module Domain =
     | Flavour_restocked of Flavour * int
     | Flavour_went_out_of_stock of Flavour
     | Flavour_was_not_in_stock of Flavour
+
+
+  type Truck = Truck of System.Guid  
 
 
 module Projections =
@@ -231,15 +234,112 @@ module Projections =
     |> Map.tryFind flavour
     |> Option.defaultValue 0
 
+module Queries =
+  open EventStore 
+  open Projections
+  open Domain
 
-module ReadModels =
-  open Projections 
+  type QueryResult<'Result> =
+    | Handled of 'Result 
+    | NotHandled  
 
-  type ReadModel<'State, 'Event> =
+  type QueryHandler<'Query,'Result> =
+    'Query -> QueryResult<'Result>
+
+  type Msg<'Query,'Result> =
+    | Query of 'Query * AsyncReplyChannel<QueryResult<'Result>>
+
+  let rec private oneOf (queryHandler : QueryHandler<_,_> list) query =
+    match queryHandler with
+    | handler :: rest ->
+        match handler query with
+        | NotHandled ->
+            oneOf rest query
+
+        | Handled response ->
+            Handled response
+
+    | _ -> NotHandled
+
+  let queryHandler (queryHandler : QueryHandler<_,_> list) : QueryHandler<_,_> =
+    let agent =
+      MailboxProcessor.Start(fun inbox ->
+        let rec loop() =
+          async {
+            let! msg = inbox.Receive()
+
+            match msg with
+            | Query (query,reply)->
+                oneOf queryHandler query
+                |> reply.Reply
+
+            return! loop()
+          }
+
+        loop()
+      )
+
+    let queryHandler query =
+      agent.PostAndReply(fun reply -> Query (query,reply))
+
+    queryHandler
+
+module Readmodels =
+  open EventStore 
+  open Projections
+  open Domain
+  open Queries
+
+
+
+  // type Query =
+  //   | Trucks 
+  //   | FlavoursInStock of Truck
+
+  type ReadModel<'State, 'Event, 'Query, 'Result> =
     {
-      Subscribe : 'Event list -> unit
-      Get : unit -> 'State
+      Notify : EventListener<'Event>
+      HandleQuery : QueryHandler<'Query,'Result>
     } 
+
+    (*
+
+      Was erwarten wir von einem Readmodel
+      - spezifische Abfragen -> Query?
+      - projections für einen Stream
+      - projections für alle Streams
+
+
+    *)
+
+
+  // type Msg<'State, 'Event> =
+  //   | Notify of StreamEvent<'Event> list
+  //   | Get of AsyncReplyChannel<'State>
+
+
+
+
+
+  // QueryHandler.query (flavoursInStock truck1)
+
+
+
+
+  
+  // let readmodel (projection : Projection<'State, 'Event>) : ReadModel<'State, 'Event> =
+  //   let agent =
+  //     MailboxProcessor.Start(fun inbox -> 
+  //       let rec loop state =
+  //         async {
+  //           let! msg = inbox.Receive() 
+
+  //           match msg with  
+  //           | Notify events ->
+
+  //         }
+  //     )
+
 
 
 module Behaviour =
