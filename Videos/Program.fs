@@ -53,7 +53,7 @@ module EventStore =
     new_events 
     |> (@) stream_history
 
-  let notifySubscribers events subscriptions =
+  let notifyEventListeners events subscriptions =
     subscriptions 
     |> List.iter (fun subscription -> events |> List.iter subscription)
 
@@ -63,14 +63,14 @@ module EventStore =
 
     let mailbox =
       MailboxProcessor.Start(fun inbox ->
-        let rec loop (history,subscriptions : EventListener<'Event> list) =
+        let rec loop (history,eventListeners : EventListener<'Event> list) =
           async {
             let! msg = inbox.Receive()
 
             match msg with
             | Get reply ->
                 reply.Reply history
-                return! loop (history,subscriptions)
+                return! loop (history,eventListeners)
 
             | GetStream (stream,reply) ->
                 history
@@ -78,7 +78,7 @@ module EventStore =
                 |> asEvents
                 |> reply.Reply
 
-                return! loop (history,subscriptions)
+                return! loop (history,eventListeners)
 
             | Append (stream,events)  ->
                 let new_history =
@@ -86,7 +86,7 @@ module EventStore =
                   |> streamFor stream
                   |> appendFor stream history (events |> asStreamEvents stream)
 
-                return! loop (new_history, subscriptions)
+                return! loop (new_history, eventListeners)
 
             | Evolve (stream,producer) ->
                 let stream_history =
@@ -101,15 +101,14 @@ module EventStore =
                 let newHistory =
                   appendFor stream history new_events stream_history 
 
-                do subscriptions |> notifySubscribers new_events           
+                do eventListeners |> notifyEventListeners new_events           
 
-                return! loop (newHistory, subscriptions)
+                return! loop (newHistory, eventListeners)
 
-            | Subscribe subscription ->
-                do history |> List.iter subscription
-                
+            | Subscribe listener ->
+                do history |> List.iter listener     
 
-                return! loop (history, subscription :: subscriptions)
+                return! loop (history, listener :: eventListeners)
 
                 // Idee: gib möglichkeiten subscribern zum slicen mit
 
@@ -235,10 +234,6 @@ module Projections =
     |> Option.defaultValue 0
 
 module Queries =
-  open EventStore 
-  open Projections
-  open Domain
-
   type QueryResult<'Result> =
     | Handled of 'Result 
     | NotHandled  
@@ -286,11 +281,8 @@ module Queries =
 
 module Readmodels =
   open EventStore 
-  open Projections
   open Domain
   open Queries
-
-
 
   type Query =
     | Trucks 
@@ -326,17 +318,22 @@ module Readmodels =
         - Readmodel prüft, ob es damit umgehen kann
         - Readmodel entscheidet wie es damit umgeht
         - gibt antwort zurück
+
+        Vorteil Memory: nichts anderes zu deployen etc
+        Nachteil: Serverstart, Speicherverbrauch
+
+        Zeigen: Behaviour kommt später, wir haben keinen Zugriff drauf
+
+        Man kann mehr logik in ein Readmodel bauen oder unterschiedliche
     *)
 
   type Msg<'Event,'Query,'Result> =
     | Notify of StreamEvent<'Event>
     | Query of 'Query * AsyncReplyChannel<QueryResult<'Result>>
 
-
-
   let flavoursInStock () =
     let agent =
-      let initState : Map<Stream, Map<Flavour, int>> = Map.empty
+      let initState : Map<Stream, Map<Flavour, int>> = Map.empty  // hier record draus machen
 
       MailboxProcessor.Start(fun inbox -> 
         let rec loop state =
@@ -493,7 +490,6 @@ module Helper =
 
 open EventStore
 open Domain
-open Projections
 open Helper
 
 [<EntryPoint>]
