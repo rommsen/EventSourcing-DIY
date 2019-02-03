@@ -1,4 +1,5 @@
-namespace Domain 
+namespace Domain
+open Infrastructure
 
 type Flavour =
 | Vanilla
@@ -10,7 +11,18 @@ type Event =
 | Flavour_went_out_of_stock of Flavour
 | Flavour_was_not_in_stock of Flavour
 
-type Truck = Truck of System.Guid  
+type Truck = Truck of System.Guid
+
+
+module API =
+
+  type Query =
+    | Trucks
+    | FlavoursInStock of Truck * Flavour
+
+
+  // type QueryResult =
+  //   | QueryResult of obj
 
 
 module Projections =
@@ -23,7 +35,7 @@ module Projections =
   let soldOfFlavour flavour state =
     state
     |> Map.tryFind flavour
-    |> Option.defaultValue 0  
+    |> Option.defaultValue 0
 
   let private updateSoldFlavours state event =
     match event with
@@ -71,18 +83,7 @@ module Projections =
 
 
 module Readmodels =
-  open Infrastructure 
-
-  type Query =
-    | Trucks 
-    | FlavoursInStock of Truck * Flavour
-
-  type ReadModel<'Event, 'Query, 'Result> =
-    {
-      EventListener : EventListener<'Event>
-      QueryHandler : QueryHandler<'Query,'Result>
-    } 
-
+  open API
     (*
 
       Was erwarten wir von einem Readmodel
@@ -124,12 +125,12 @@ module Readmodels =
     let agent =
       let initState : Map<Stream, Map<Flavour, int>> = Map.empty  // hier record draus machen
 
-      MailboxProcessor.Start(fun inbox -> 
+      MailboxProcessor.Start(fun inbox ->
         let rec loop state =
           async {
-            let! msg = inbox.Receive() 
+            let! msg = inbox.Receive()
 
-            match msg with  
+            match msg with
             | Notify event ->
                 let newState =
                   state
@@ -142,28 +143,38 @@ module Readmodels =
 
             | Query (query, reply) ->
                 let result =
-                  match query with  
+                  match query with
                   | FlavoursInStock (Truck truck, flavour) ->
-                      state 
+                      state
                       |> Map.tryFind truck
-                      |> Option.defaultValue Map.empty 
-                      |> Map.tryFind flavour 
-                      |> Option.defaultValue 0 
-                      |> Handled 
+                      |> Option.defaultValue Map.empty
+                      |> Map.tryFind flavour
+                      |> Option.defaultValue 0
+                      |> box
+                      |> Handled
 
-                   | _ -> 
+                  | Trucks ->
+                      [
+                        System.Guid.NewGuid() |> Truck
+                      ]
+                      |> box
+                      |> Handled
+
+                   | _ ->
                       NotHandled
 
-                result |> reply.Reply                                  
+                result |> reply.Reply
+
+                return! loop state
           }
 
-        loop initState        
+        loop initState
       )
 
     {
       EventListener = Notify >> agent.Post
       QueryHandler = fun query -> agent.PostAndReply(fun reply -> Query (query,reply))
-    }    
+    }
 
 
 module Behaviour =

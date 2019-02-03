@@ -41,6 +41,7 @@ module Helper =
 open Infrastructure
 open Domain
 open Helper
+open API
 
 [<EntryPoint>]
 let main _ =
@@ -51,6 +52,17 @@ let main _ =
   runTests ()
 
   let eventStore : EventStore<Event> = EventStore.initialize()
+  let queryHandler,addQueryHandler = QueryHandler.initialize()
+  let readmodels =
+    [
+      Readmodels.flavoursInStock()
+    ]
+
+  readmodels
+  |> List.iter (fun readmodel ->
+      do readmodel.EventListener |> eventStore.Subscribe
+      do readmodel.QueryHandler |> addQueryHandler)
+
 
   eventStore.Evolve truck1 (Behaviour.sellFlavour Vanilla)
   eventStore.Evolve truck1 (Behaviour.sellFlavour Strawberry)
@@ -71,4 +83,10 @@ let main _ =
   eventStore.Get()
   |> printTotalHistory
 
+
+  let flavourResult = queryHandler (Query.FlavoursInStock (Truck truck1, Vanilla))
+  printfn "flavourResult %A" flavourResult
+
+  let truckResult = queryHandler Query.Trucks
+  printfn "truckresult %A" truckResult
   0

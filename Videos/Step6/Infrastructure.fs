@@ -8,11 +8,11 @@ type EventProducer<'Event> =
 
 type StreamEvent<'Event> =
   {
-    Stream : Stream 
+    Stream : Stream
     Event : 'Event
-  }  
+  }
 
-type EventListener<'Event> = 
+type EventListener<'Event> =
   StreamEvent<'Event> -> unit
 
 
@@ -32,11 +32,19 @@ type Projection<'State,'Event> =
   }
 
 type QueryResult<'Result> =
-  | Handled of 'Result 
-  | NotHandled  
+  | Handled of obj
+  | NotHandled
 
 type QueryHandler<'Query,'Result> =
   'Query -> QueryResult<'Result>
+
+
+
+type ReadModel<'Event, 'Query, 'Result> =
+  {
+    EventListener : EventListener<'Event>
+    QueryHandler : QueryHandler<'Query,'Result>
+  }
 
 
 module EventStore =
@@ -50,21 +58,21 @@ module EventStore =
   let streamFor stream history =
     history
     |> List.filter (fun streamEvent -> streamEvent.Stream = stream)
-    
+
   let asEvents streamEvents =
-    streamEvents 
+    streamEvents
     |> List.map (fun streamEvent -> streamEvent.Event)
 
   let asStreamEvents stream events =
     events
-    |> List.map (fun event -> { Stream = stream ; Event = event })  
+    |> List.map (fun event -> { Stream = stream ; Event = event })
 
   let appendFor stream history new_events stream_history =
-    new_events 
+    new_events
     |> (@) stream_history
 
   let notifyEventListeners events subscriptions =
-    subscriptions 
+    subscriptions
     |> List.iter (fun subscription -> events |> List.iter subscription)
 
   let initialize () : EventStore<'Event> =
@@ -90,32 +98,25 @@ module EventStore =
                 return! loop (history,eventListeners)
 
             | Append (stream,events)  ->
-                let new_history =
-                  history
-                  |> streamFor stream
-                  |> appendFor stream history (events |> asStreamEvents stream)
-
-                return! loop (new_history, eventListeners)
+                return! loop (history @ (events |> asStreamEvents stream), eventListeners)
 
             | Evolve (stream,producer) ->
+                // printfn "history %A" history
                 let stream_history =
                   history |> streamFor stream
 
                 let new_events =
-                  stream_history 
+                  stream_history
                   |> asEvents
                   |> producer
                   |> asStreamEvents stream
 
-                let newHistory =
-                  appendFor stream history new_events stream_history 
+                do eventListeners |> notifyEventListeners new_events
 
-                do eventListeners |> notifyEventListeners new_events           
-
-                return! loop (newHistory, eventListeners)
+                return! loop (history @ new_events, eventListeners)
 
             | Subscribe listener ->
-                do history |> List.iter listener     
+                do history |> List.iter listener
 
                 return! loop (history, listener :: eventListeners)
 
@@ -154,7 +155,7 @@ module EventStore =
     let subscribe (subscription : EventListener<_>) =
       subscription
       |> Subscribe
-      |> mailbox.Post    
+      |> mailbox.Post
 
     {
       Get = fun () ->  mailbox.PostAndReply Get
@@ -165,43 +166,49 @@ module EventStore =
     }
 
 
-module Queries =
+module QueryHandler =
 
   type Msg<'Query,'Result> =
     | Query of 'Query * AsyncReplyChannel<QueryResult<'Result>>
+    | AddHandler of QueryHandler<'Query, 'Result>
 
-  let rec private oneOf (queryHandler : QueryHandler<_,_> list) query =
+  let rec private choice (queryHandler : QueryHandler<_,_> list) query =
     match queryHandler with
     | handler :: rest ->
         match handler query with
         | NotHandled ->
-            oneOf rest query
+            choice rest query
 
         | Handled response ->
             Handled response
 
     | _ -> NotHandled
 
-  let queryHandler (queryHandler : QueryHandler<_,_> list) : QueryHandler<_,_> =
+  let initialize () : QueryHandler<_,_> * (QueryHandler<_,_> -> unit) =
     let agent =
       MailboxProcessor.Start(fun inbox ->
-        let rec loop() =
+        let rec loop queryHandler =
           async {
             let! msg = inbox.Receive()
 
             match msg with
             | Query (query,reply)->
-                oneOf queryHandler query
+                choice queryHandler query
                 |> reply.Reply
 
-            return! loop()
+                return! loop queryHandler
+
+            | AddHandler handler ->
+                return! loop (handler :: queryHandler)
           }
 
-        loop()
+        loop []
       )
 
     let queryHandler query =
       agent.PostAndReply(fun reply -> Query (query,reply))
 
-    queryHandler
-  
+    let addQueryHandler =
+      AddHandler >> agent.Post
+
+    queryHandler,addQueryHandler
