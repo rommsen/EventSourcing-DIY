@@ -56,6 +56,7 @@ let main _ =
   let readmodels =
     [
       Readmodels.flavoursInStock()
+      Readmodels.trucks()
     ]
 
   readmodels

@@ -97,3 +97,40 @@ module Readmodels =
       EventListener = Notify >> agent.Post
       QueryHandler = fun query -> agent.PostAndReply(fun reply -> Query (query,reply))
     }
+
+  let trucks () =
+    let agent =
+      let initState = []
+
+      MailboxProcessor.Start(fun inbox ->
+        let rec loop state =
+          async {
+            let! msg = inbox.Receive()
+
+            match msg with
+            | Notify event ->
+                return! loop state
+
+            | Query (query, reply) ->
+                let result =
+                  match query with
+                  | Trucks ->
+                      [ System.Guid.NewGuid() |> Truck ]
+                      |> box
+                      |> Handled
+
+                   | _ ->
+                      NotHandled
+
+                result |> reply.Reply
+
+                return! loop state
+          }
+
+        loop initState
+      )
+
+    {
+      EventListener = Notify >> agent.Post
+      QueryHandler = fun query -> agent.PostAndReply(fun reply -> Query (query,reply))
+    }
