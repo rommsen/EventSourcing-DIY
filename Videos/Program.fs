@@ -39,9 +39,9 @@ module Helper =
 
 
 open Infrastructure
+open Application
 open Domain
 open Helper
-open API
 
 [<EntryPoint>]
 let main _ =
@@ -84,9 +84,9 @@ let main _ =
   |> printTotalHistory
 
 
-  let flavourResult = queryHandler (Query.FlavoursInStock (Truck truck1, Vanilla))
+  let flavourResult = queryHandler (API.Query.FlavoursInStock (Truck truck1, Vanilla))
   printfn "flavourResult %A" flavourResult
 
-  let truckResult = queryHandler Query.Trucks
+  let truckResult = queryHandler API.Query.Trucks
   printfn "truckresult %A" truckResult
   0
