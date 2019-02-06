@@ -1,17 +1,18 @@
 namespace Domain
 open Infrastructure
 
+type Truck = Truck of System.Guid
+
 type Flavour =
 | Vanilla
 | Strawberry
 
 type Event =
-| Flavour_sold of Flavour
-| Flavour_restocked of Flavour * int
-| Flavour_went_out_of_stock of Flavour
-| Flavour_was_not_in_stock of Flavour
+| Flavour_sold of Truck * Flavour
+| Flavour_restocked of Truck * Flavour * int
+| Flavour_went_out_of_stock of Truck * Flavour
+| Flavour_was_not_in_stock of Truck * Flavour
 
-type Truck = Truck of System.Guid
 
 
 module Projections =
@@ -26,7 +27,7 @@ module Projections =
 
   let private updateSoldFlavours state event =
     match event with
-    | Flavour_sold flavour ->
+    | Flavour_sold (_,flavour) ->
         state
         |> soldOfFlavour flavour
         |> fun portions -> state |> Map.add flavour (portions + 1)
@@ -48,10 +49,10 @@ module Projections =
 
   let updateFlavoursInStock stock event =
     match event with
-    | Flavour_sold flavour ->
+    | Flavour_sold (_, flavour) ->
         stock |> restock flavour -1
 
-    | Flavour_restocked (flavour, portions) ->
+    | Flavour_restocked (_, flavour, portions) ->
         stock |> restock flavour portions
 
     | _ ->
@@ -73,17 +74,17 @@ module Behaviour =
 
   open Projections
 
-  let sellFlavour flavour events =
+  let sellFlavour truck flavour events =
     let stock =
       events
       |> project flavoursInStock
       |> stockOf flavour
 
     match stock with
-    | 0 -> [Flavour_was_not_in_stock flavour]
-    | 1 -> [Flavour_sold flavour ; Flavour_went_out_of_stock flavour]
-    | _ -> [Flavour_sold flavour]
+    | 0 -> [Flavour_was_not_in_stock (truck,flavour)]
+    | 1 -> [Flavour_sold (truck,flavour) ; Flavour_went_out_of_stock (truck, flavour)]
+    | _ -> [Flavour_sold (truck,flavour)]
 
 
-  let restock flavour portions events =
-    [ Flavour_restocked (flavour,portions) ]
+  let restock truck flavour portions events =
+    [ Flavour_restocked (truck,flavour,portions) ]

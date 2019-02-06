@@ -46,8 +46,10 @@ open Helper
 [<EntryPoint>]
 let main _ =
 
-  let truck1 = System.Guid.NewGuid()
-  let truck2 = System.Guid.NewGuid()
+  let guid (Truck guid) = guid
+
+  let truck1 = Truck <| System.Guid.NewGuid()
+  let truck2 = Truck <| System.Guid.NewGuid()
 
   runTests ()
 
@@ -65,18 +67,18 @@ let main _ =
       do readmodel.QueryHandler |> addQueryHandler)
 
 
-  eventStore.Evolve truck1 (Behaviour.sellFlavour Vanilla)
-  eventStore.Evolve truck1 (Behaviour.sellFlavour Strawberry)
-  eventStore.Evolve truck1 (Behaviour.restock Vanilla 5)
-  eventStore.Evolve truck1 (Behaviour.sellFlavour Vanilla)
+  eventStore.Evolve (guid truck1) (Behaviour.sellFlavour truck1 Vanilla)
+  eventStore.Evolve (guid truck1) (Behaviour.sellFlavour truck1 Strawberry)
+  eventStore.Evolve (guid truck1) (Behaviour.restock truck1 Vanilla 5)
+  eventStore.Evolve (guid truck1) (Behaviour.sellFlavour truck1 Vanilla)
 
-  eventStore.Evolve truck2 (Behaviour.restock Strawberry 3)
-  eventStore.Evolve truck2 (Behaviour.sellFlavour Strawberry)
-  eventStore.Evolve truck2 (Behaviour.sellFlavour Strawberry)
-  eventStore.Evolve truck2 (Behaviour.sellFlavour Strawberry)
+  eventStore.Evolve (guid truck2) (Behaviour.restock truck2 Strawberry 3)
+  eventStore.Evolve (guid truck2) (Behaviour.sellFlavour truck2 Strawberry)
+  eventStore.Evolve (guid truck2) (Behaviour.sellFlavour truck2 Strawberry)
+  eventStore.Evolve (guid truck2) (Behaviour.sellFlavour truck2 Strawberry)
 
-  let events_truck_1 = eventStore.GetStream truck1
-  let events_truck_2 = eventStore.GetStream truck2
+  let events_truck_1 = eventStore.GetStream (guid truck1)
+  let events_truck_2 = eventStore.GetStream (guid truck2)
 
   events_truck_1 |> printEvents "Truck 1"
   events_truck_2 |> printEvents "Truck 2"
@@ -85,7 +87,7 @@ let main _ =
   |> printTotalHistory
 
 
-  let flavourResult = queryHandler (API.Query.FlavoursInStock (Truck truck1, Vanilla))
+  let flavourResult = queryHandler (API.Query.FlavoursInStock (truck1, Vanilla))
   printfn "flavourResult %A" flavourResult
 
   let truckResult = queryHandler API.Query.Trucks

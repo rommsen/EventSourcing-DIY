@@ -14,38 +14,39 @@ module Domain =
     equal events expectedEvents "Events should equal expected events"
 
   let tests =
+    let truck = Truck <| System.Guid.NewGuid()
     testList "sellFlavour"
       [
         test "Flavour_sold" {
           Given
             [
-              Flavour_restocked (Vanilla,5)
-              Flavour_sold Vanilla
-              Flavour_sold Vanilla
+              Flavour_restocked (truck,Vanilla,5)
+              Flavour_sold (truck,Vanilla)
+              Flavour_sold (truck,Vanilla)
             ]
-          |> When (Behaviour.sellFlavour Vanilla)
-          |> Then [Flavour_sold Vanilla]
+          |> When (Behaviour.sellFlavour truck Vanilla)
+          |> Then [Flavour_sold (truck,Vanilla)]
         }
 
         test "Flavour_was_not_in_stock" {
           Given
             [
-              Flavour_restocked (Vanilla,5)
-              Flavour_restocked (Strawberry,2)
-              Flavour_sold Vanilla
-              Flavour_sold Vanilla
-              Flavour_sold Strawberry
-              Flavour_sold Strawberry
-              Flavour_went_out_of_stock Strawberry
+              Flavour_restocked (truck,Vanilla,5)
+              Flavour_restocked (truck,Strawberry,2)
+              Flavour_sold (truck,Vanilla)
+              Flavour_sold (truck,Vanilla)
+              Flavour_sold (truck,Strawberry)
+              Flavour_sold (truck,Strawberry)
+              Flavour_went_out_of_stock (truck,Strawberry)
             ]
-          |> When (Behaviour.sellFlavour Strawberry)
-          |> Then [Flavour_was_not_in_stock Strawberry]
+          |> When (Behaviour.sellFlavour truck Strawberry)
+          |> Then [Flavour_was_not_in_stock (truck,Strawberry)]
         }
 
         test "Flavour_restocked" {
           Given []
-          |> When (Behaviour.restock Vanilla 5 )
-          |> Then [Flavour_restocked (Vanilla,5)]
+          |> When (Behaviour.restock truck Vanilla 5)
+          |> Then [Flavour_restocked (truck,Vanilla,5)]
         }
       ]
 
