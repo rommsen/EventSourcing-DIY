@@ -13,8 +13,36 @@ module Domain =
   let Then expectedEvents events =
     equal events expectedEvents "Events should equal expected events"
 
-  let tests =
+  let truckTests =
     let truck = Truck <| System.Guid.NewGuid()
+    let truck2 = Truck <| System.Guid.NewGuid()
+
+    testList "truckTests"
+      [
+        test "Truck_added_to_fleet" {
+          Given
+            [
+              Truck_added_to_fleet truck
+            ]
+          |> When Behaviour.addTruckToFleet truck
+          |> Then [Truck_added_to_fleet truck]
+        }
+
+        test "Truck_already_in_fleet" {
+          Given
+            [
+              Truck_added_to_fleet truck
+            ]
+          |> When Behaviour.addTruckToFleet truck
+          |> Then [Truck_already_in_fleet truck]
+        }
+      ]
+
+
+  let sellTests =
+    let truck = Truck <| System.Guid.NewGuid()
+    let truck2 = Truck <| System.Guid.NewGuid()
+
     testList "sellFlavour"
       [
         test "Flavour_sold" {
@@ -48,5 +76,12 @@ module Domain =
           |> When (Behaviour.restock truck Vanilla 5)
           |> Then [Flavour_restocked (truck,Vanilla,5)]
         }
+      ]
+
+  let domainTests =
+    testList "domainTests"
+      [
+        truckTests
+        sellTests
       ]
 

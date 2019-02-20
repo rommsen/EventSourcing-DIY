@@ -34,7 +34,7 @@ module Helper =
 
 
   let runTests () =
-    runTests defaultConfig Domain.tests |> ignore
+    runTests defaultConfig Domain.domainTests |> ignore
 
 
 

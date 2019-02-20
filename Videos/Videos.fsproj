@@ -6,8 +6,8 @@
   <ItemGroup>
     <Compile Include="Step6/Infrastructure.fs" />
     <Compile Include="Step6/Domain.fs" />
-    <Compile Include="Step6/Tests.fs" />
     <Compile Include="Step6/Application.fs" />
+    <Compile Include="Step6/Tests.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
   <Import Project="..\.paket\Paket.Restore.targets" />
