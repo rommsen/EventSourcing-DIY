@@ -8,6 +8,8 @@ type Flavour =
 | Strawberry
 
 type Event =
+| Truck_added_to_fleet of Truck
+| Truck_already_in_fleet of Truck
 | Flavour_sold of Truck * Flavour
 | Flavour_restocked of Truck * Flavour * int
 | Flavour_went_out_of_stock of Truck * Flavour
@@ -88,3 +90,7 @@ module Behaviour =
 
   let restock truck flavour portions events =
     [ Flavour_restocked (truck,flavour,portions) ]
+
+
+  let addTruckToFleet truck events =
+    [Truck_added_to_fleet truck]

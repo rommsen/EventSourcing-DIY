@@ -1,27 +1,27 @@
 namespace Infrastructure
 
-type Stream = System.Guid
+type EventSource = System.Guid
 
 type EventProducer<'Event> =
   'Event list -> 'Event list
 
 
-type StreamEvent<'Event> =
+type EventEnvelope<'Event> =
   {
-    Stream : Stream
+    Source : EventSource
     Event : 'Event
   }
 
 type EventListener<'Event> =
-  StreamEvent<'Event> -> unit
+  EventEnvelope<'Event> -> unit
 
 
 type EventStore<'Event> =
   {
-    Get : unit -> StreamEvent<'Event> list
-    GetStream : Stream -> 'Event list
-    Append : Stream -> 'Event list -> unit
-    Evolve : Stream -> EventProducer<'Event> -> unit
+    Get : unit -> EventEnvelope<'Event> list
+    GetStream : EventSource -> EventEnvelope<'Event> list
+    Append : EventSource -> 'Event list -> unit
+    Evolve : EventSource -> EventProducer<'Event> -> unit
     Subscribe : EventListener<'Event>-> unit
   }
 
@@ -49,34 +49,30 @@ type ReadModel<'Event, 'Query, 'Result> =
 
 module EventStore =
   type Msg<'Event> =
-    | Get of AsyncReplyChannel<StreamEvent<'Event> list>
-    | GetStream of Stream * AsyncReplyChannel<'Event list>
-    | Append of  Stream * 'Event list
-    | Evolve of Stream * EventProducer<'Event>
+    | Get of AsyncReplyChannel<EventEnvelope<'Event> list>
+    | GetStream of EventSource * AsyncReplyChannel<EventEnvelope<'Event> list>
+    | Append of  EventSource * 'Event list
+    | Evolve of EventSource * EventProducer<'Event>
     | Subscribe of EventListener<'Event>
 
-  let streamFor stream history =
+  let streamFor source history =
     history
-    |> List.filter (fun streamEvent -> streamEvent.Stream = stream)
+    |> List.filter (fun envelope -> envelope.Source = source)
 
-  let asEvents streamEvents =
-    streamEvents
-    |> List.map (fun streamEvent -> streamEvent.Event)
+  let asEvents eventEnvelopes =
+    eventEnvelopes
+    |> List.map (fun envelope -> envelope.Event)
 
-  let asStreamEvents stream events =
+  let enveloped source events =
     events
-    |> List.map (fun event -> { Stream = stream ; Event = event })
-
-  let appendFor stream history new_events stream_history =
-    new_events
-    |> (@) stream_history
+    |> List.map (fun event -> { Source = source ; Event = event })
 
   let notifyEventListeners events subscriptions =
     subscriptions
     |> List.iter (fun subscription -> events |> List.iter subscription)
 
   let initialize () : EventStore<'Event> =
-    let history : StreamEvent<'Event> list = []
+    let history : EventEnvelope<'Event> list = []
 
     let mailbox =
       MailboxProcessor.Start(fun inbox ->
@@ -89,27 +85,25 @@ module EventStore =
                 reply.Reply history
                 return! loop (history,eventListeners)
 
-            | GetStream (stream,reply) ->
+            | GetStream (source,reply) ->
                 history
-                |> streamFor stream
-                |> asEvents
+                |> streamFor source
                 |> reply.Reply
 
                 return! loop (history,eventListeners)
 
-            | Append (stream,events)  ->
-                return! loop (history @ (events |> asStreamEvents stream), eventListeners)
+            | Append (source,events)  ->
+                return! loop (history @ (events |> enveloped source), eventListeners)
 
-            | Evolve (stream,producer) ->
-                // printfn "history %A" history
-                let stream_history =
-                  history |> streamFor stream
+            | Evolve (source,producer) ->
+                let source_history =
+                  history |> streamFor source
 
                 let new_events =
-                  stream_history
+                  source_history
                   |> asEvents
                   |> producer
-                  |> asStreamEvents stream
+                  |> enveloped source
 
                 do eventListeners |> notifyEventListeners new_events
 

@@ -47,12 +47,12 @@ module Readmodels =
     *)
 
   type Msg<'Event,'Query,'Result> =
-    | Notify of StreamEvent<'Event>
+    | Notify of EventEnvelope<'Event>
     | Query of 'Query * AsyncReplyChannel<QueryResult<'Result>>
 
   let flavoursInStock () =
     let agent =
-      let initState : Map<Stream, Map<Flavour, int>> = Map.empty  // hier record draus machen
+      let initState : Map<EventSource, Map<Flavour, int>> = Map.empty  // hier record draus machen
 
       MailboxProcessor.Start(fun inbox ->
         let rec loop state =
@@ -60,13 +60,13 @@ module Readmodels =
             let! msg = inbox.Receive()
 
             match msg with
-            | Notify event ->
+            | Notify eventEnvelope ->
                 let newState =
                   state
-                  |> Map.tryFind event.Stream
+                  |> Map.tryFind eventEnvelope.Source
                   |> Option.defaultValue Projections.flavoursInStock.Init
-                  |> fun projectionState -> event.Event |> Projections.flavoursInStock.Update projectionState
-                  |> fun newState -> state |> Map.add event.Stream newState
+                  |> fun projectionState -> eventEnvelope.Event |> Projections.flavoursInStock.Update projectionState
+                  |> fun newState -> state |> Map.add eventEnvelope.Source newState
 
                 return! loop newState
 

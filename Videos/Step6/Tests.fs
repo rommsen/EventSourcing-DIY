@@ -28,14 +28,14 @@ module Domain =
           |> Then [Truck_added_to_fleet truck]
         }
 
-        test "Truck_already_in_fleet" {
-          Given
-            [
-              Truck_added_to_fleet truck
-            ]
-          |> When Behaviour.addTruckToFleet truck
-          |> Then [Truck_already_in_fleet truck]
-        }
+        // test "Truck_already_in_fleet" {
+        //   Given
+        //     [
+        //       Truck_added_to_fleet truck
+        //     ]
+        //   |> When Behaviour.addTruckToFleet truck
+        //   |> Then [Truck_already_in_fleet truck]
+        // }
       ]
 
 
