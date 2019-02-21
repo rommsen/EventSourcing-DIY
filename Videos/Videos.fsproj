@@ -4,10 +4,14 @@
     <TargetFramework>netcoreapp2.1</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="Step6/Infrastructure.fs" />
-    <Compile Include="Step6/Domain.fs" />
-    <Compile Include="Step6/Application.fs" />
-    <Compile Include="Step6/Tests.fs" />
+    <Compile Include="Step6/Infrastructure6.fs" />
+    <Compile Include="Step6/Domain6.fs" />
+    <Compile Include="Step6/Application6.fs" />
+    <Compile Include="Step6/Tests6.fs" />
+    <Compile Include="Step7/Infrastructure7.fs" />
+    <Compile Include="Step7/Domain7.fs" />
+    <Compile Include="Step7/Application7.fs" />
+    <Compile Include="Step7/Tests7.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
   <Import Project="..\.paket\Paket.Restore.targets" />

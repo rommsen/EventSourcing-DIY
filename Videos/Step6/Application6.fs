@@ -1,8 +1,8 @@
-namespace Application
+namespace Step6.Application
 
 module API =
 
-  open Domain
+  open Step6.Domain
 
   type Query =
     | Trucks
@@ -10,8 +10,8 @@ module API =
 
 
 module Readmodels =
-  open Infrastructure
-  open Domain
+  open Step6.Infrastructure
+  open Step6.Domain
   open API
     (*
 

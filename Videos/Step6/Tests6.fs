@@ -1,7 +1,7 @@
-namespace Tests
+namespace Step6.Tests
 
 module Domain =
-  open Domain
+  open Step6.Domain
   open Expecto
   open Expecto.Expect
 

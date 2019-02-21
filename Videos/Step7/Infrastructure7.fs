@@ -1,4 +1,4 @@
-namespace Infrastructure
+namespace Step7.Infrastructure
 
 type EventSource = System.Guid
 

@@ -1,5 +1,6 @@
-namespace Domain
-open Infrastructure
+namespace Step6.Domain
+
+open Step6.Infrastructure
 
 type Truck = Truck of System.Guid
 

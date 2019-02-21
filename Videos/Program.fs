@@ -1,8 +1,8 @@
 module Helper =
 
   open Expecto
-  open Domain
-  open Tests
+  open Step7.Domain
+  open Step7.Tests
 
   let printUl list =
     list
@@ -38,9 +38,9 @@ module Helper =
 
 
 
-open Infrastructure
-open Application
-open Domain
+open Step7.Infrastructure
+open Step7.Application
+open Step7.Domain
 open Helper
 
 [<EntryPoint>]
