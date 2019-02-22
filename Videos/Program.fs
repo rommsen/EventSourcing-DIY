@@ -46,15 +46,22 @@ open Helper
 [<EntryPoint>]
 let main _ =
 
+  // runTests ()
+
   let guid (Truck guid) = guid
 
-  let truck1 = Truck <| System.Guid.NewGuid()
-  let truck2 = Truck <| System.Guid.NewGuid()
+  let truck1 = Truck <| System.Guid.Parse "49d9d107-aceb-4b2d-a7e3-eca784a9de6e"
+  let truck2 = Truck <| System.Guid.Parse "8b916bde-6bdf-43cc-b43b-69c9f4c3e5c4"
 
-  runTests ()
+  let eventStore : EventStore<Event> =
+    EventStore.initialize()
 
-  let eventStore : EventStore<Event> = EventStore.initialize()
-  let queryHandler,addQueryHandler = QueryHandler.initialize()
+  let commandHandler : CommandHandler<Command> =
+    CommandHandler.initialize Behaviour.behaviour eventStore
+
+  let queryHandler,addQueryHandler =
+    QueryHandler.initialize()
+
   let readmodels =
     [
       Readmodels.flavoursInStock()
@@ -67,24 +74,29 @@ let main _ =
       do readmodel.QueryHandler |> addQueryHandler)
 
 
-  eventStore.Evolve (guid truck1) (Behaviour.sellFlavour truck1 Vanilla)
-  eventStore.Evolve (guid truck1) (Behaviour.sellFlavour truck1 Strawberry)
-  eventStore.Evolve (guid truck1) (Behaviour.restock truck1 Vanilla 5)
-  eventStore.Evolve (guid truck1) (Behaviour.sellFlavour truck1 Vanilla)
+  let truck1_guid = guid truck1
+  let truck2_guid = guid truck2
 
-  eventStore.Evolve (guid truck2) (Behaviour.restock truck2 Strawberry 3)
-  eventStore.Evolve (guid truck2) (Behaviour.sellFlavour truck2 Strawberry)
-  eventStore.Evolve (guid truck2) (Behaviour.sellFlavour truck2 Strawberry)
-  eventStore.Evolve (guid truck2) (Behaviour.sellFlavour truck2 Strawberry)
+  Sell_flavour (truck1, Vanilla) |> commandHandler.Handle truck1_guid
+  Sell_flavour (truck1, Strawberry) |> commandHandler.Handle truck1_guid
+  Restock_flavour (truck1, Vanilla, 5) |> commandHandler.Handle truck1_guid
+  Sell_flavour (truck1, Vanilla) |> commandHandler.Handle truck1_guid
 
-  let events_truck_1 = eventStore.GetStream (guid truck1)
-  let events_truck_2 = eventStore.GetStream (guid truck2)
+  Restock_flavour (truck2, Strawberry, 5) |> commandHandler.Handle truck2_guid
+  Sell_flavour (truck2, Strawberry) |> commandHandler.Handle truck2_guid
+  Sell_flavour (truck2, Strawberry) |> commandHandler.Handle truck2_guid
+  Sell_flavour (truck2, Strawberry) |> commandHandler.Handle truck2_guid
+
+  System.Console.WriteLine "Eventual Consistency in place. Hit enter to go on."
+  System.Console.ReadLine() |> ignore
+
+  let events_truck_1 = eventStore.GetStream truck1_guid
+  let events_truck_2 = eventStore.GetStream truck2_guid
 
   events_truck_1 |> printEvents "Truck 1"
   events_truck_2 |> printEvents "Truck 2"
 
-  eventStore.Get()
-  |> printTotalHistory
+  // eventStore.Get() |> printEvents "all"
 
 
   let flavourResult = queryHandler (API.Query.FlavoursInStock (truck1, Vanilla))

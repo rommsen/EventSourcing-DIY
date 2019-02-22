@@ -20,8 +20,7 @@ type EventStore<'Event> =
   {
     Get : unit -> EventEnvelope<'Event> list
     GetStream : EventSource -> EventEnvelope<'Event> list
-    Append : EventSource -> 'Event list -> unit
-    Evolve : EventSource -> EventProducer<'Event> -> unit
+    Append : EventEnvelope<'Event> list -> unit
     Subscribe : EventListener<'Event>-> unit
   }
 
@@ -38,8 +37,6 @@ type QueryResult<'Result> =
 type QueryHandler<'Query,'Result> =
   'Query -> QueryResult<'Result>
 
-
-
 type ReadModel<'Event, 'Query, 'Result> =
   {
     EventListener : EventListener<'Event>
@@ -47,25 +44,26 @@ type ReadModel<'Event, 'Query, 'Result> =
   }
 
 
+type CommandHandler<'Command> =
+  {
+    Handle : EventSource -> 'Command -> unit
+  }
+
+type Behaviour<'Command,'Event> =
+  'Command -> EventProducer<'Event>
+
+
 module EventStore =
+
   type Msg<'Event> =
     | Get of AsyncReplyChannel<EventEnvelope<'Event> list>
     | GetStream of EventSource * AsyncReplyChannel<EventEnvelope<'Event> list>
-    | Append of  EventSource * 'Event list
-    | Evolve of EventSource * EventProducer<'Event>
+    | Append of  EventEnvelope<'Event> list
     | Subscribe of EventListener<'Event>
 
   let streamFor source history =
     history
     |> List.filter (fun envelope -> envelope.Source = source)
-
-  let asEvents eventEnvelopes =
-    eventEnvelopes
-    |> List.map (fun envelope -> envelope.Event)
-
-  let enveloped source events =
-    events
-    |> List.map (fun event -> { Source = source ; Event = event })
 
   let notifyEventListeners events subscriptions =
     subscriptions
@@ -80,9 +78,11 @@ module EventStore =
           async {
             let! msg = inbox.Receive()
 
+
             match msg with
             | Get reply ->
                 reply.Reply history
+
                 return! loop (history,eventListeners)
 
             | GetStream (source,reply) ->
@@ -92,22 +92,10 @@ module EventStore =
 
                 return! loop (history,eventListeners)
 
-            | Append (source,events)  ->
-                return! loop (history @ (events |> enveloped source), eventListeners)
+            | Append events ->
+                do  eventListeners |> notifyEventListeners events
 
-            | Evolve (source,producer) ->
-                let source_history =
-                  history |> streamFor source
-
-                let new_events =
-                  source_history
-                  |> asEvents
-                  |> producer
-                  |> enveloped source
-
-                do eventListeners |> notifyEventListeners new_events
-
-                return! loop (history @ new_events, eventListeners)
+                return! loop (history @ events, eventListeners)
 
             | Subscribe listener ->
                 do history |> List.iter listener
@@ -127,23 +115,17 @@ module EventStore =
                 // Eine Event Subscription braucht sie auf jeden Fall in der Order
 
                 // achtung Prototype: eventuell structs
-
           }
 
         loop (history,[])
       )
 
-    let getStream aggregate =
-      mailbox.PostAndReply (fun reply -> (aggregate,reply) |> GetStream)
+    let getStream eventSource =
+      mailbox.PostAndReply (fun reply -> (eventSource,reply) |> GetStream)
 
-    let append aggregate events =
-      (aggregate,events)
+    let append events =
+      events
       |> Append
-      |> mailbox.Post
-
-    let evolve aggregate producer =
-      (aggregate,producer)
-      |> Evolve
       |> mailbox.Post
 
     let subscribe (subscription : EventListener<_>) =
@@ -155,10 +137,49 @@ module EventStore =
       Get = fun () ->  mailbox.PostAndReply Get
       GetStream = getStream
       Append = append
-      Evolve = evolve
       Subscribe = subscribe
     }
 
+
+module CommandHandler =
+
+  let private asEvents eventEnvelopes =
+    eventEnvelopes
+    |> List.map (fun envelope -> envelope.Event)
+
+  let private enveloped source events =
+    events
+    |> List.map (fun event -> { Source = source ; Event = event })
+
+  type Msg<'Command> =
+    | Handle of 'Command
+
+  let initialize (behaviour : Behaviour<_,_>) (eventStore : EventStore<_>) : CommandHandler<_> =
+    let agent =
+      MailboxProcessor.Start(fun inbox ->
+        let rec loop () =
+          async {
+            let! msg = inbox.Receive()
+
+
+            match msg with
+            | Handle (eventSource,command) ->
+                eventSource
+                |> eventStore.GetStream
+                |> asEvents
+                |> behaviour command
+                |> enveloped eventSource
+                |> eventStore.Append
+
+                return! loop ()
+          }
+
+        loop ()
+      )
+
+    {
+      Handle = fun source command -> (source,command) |> Handle |> agent.Post
+    }
 
 module QueryHandler =
 

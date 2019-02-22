@@ -17,6 +17,12 @@ type Event =
 | Flavour_was_not_in_stock of Truck * Flavour
 
 
+type Command =
+  | Add_truck_to_fleet of Truck
+  | Sell_flavour of Truck * Flavour
+  | Restock_flavour of Truck * Flavour * int
+
+
 
 module Projections =
 
@@ -95,3 +101,18 @@ module Behaviour =
 
   let addTruckToFleet truck events =
     [Truck_added_to_fleet truck]
+
+
+
+  let behaviour command : EventProducer<Event> =
+    match command with // eventuell hier readmodels reingeben, projections können direkt weitergegeben werden
+    | Add_truck_to_fleet truck ->
+        addTruckToFleet truck
+
+    | Sell_flavour (truck, flavour) ->
+        sellFlavour truck flavour
+
+    | Restock_flavour(truck, flavour, portions) ->
+        restock truck flavour portions
+
+
