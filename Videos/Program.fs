@@ -1,8 +1,8 @@
 module Helper =
 
   open Expecto
-  open Step7.Domain
-  open Step7.Tests
+  open Step8.Domain
+  open Step8.Tests
 
   let printUl list =
     list
@@ -38,9 +38,9 @@ module Helper =
 
 
 
-open Step7.Infrastructure
-open Step7.Application
-open Step7.Domain
+open Step8.Infrastructure
+open Step8.Application
+open Step8.Domain
 open Helper
 
 [<EntryPoint>]
@@ -54,7 +54,16 @@ let main _ =
   let truck2 = Truck <| System.Guid.Parse "8b916bde-6bdf-43cc-b43b-69c9f4c3e5c4"
 
   let eventStore : EventStore<Event> =
-    EventStore.initialize()
+    EventStorage.InMemory.initialize()
+    |> EventStore.initialize
+
+
+  (*
+      InMemoryStorage
+      FileStorage
+      SqlStorage
+  *)
+
 
   let commandHandler : CommandHandler<Command> =
     CommandHandler.initialize Behaviour.behaviour eventStore

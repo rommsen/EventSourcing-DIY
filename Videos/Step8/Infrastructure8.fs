@@ -1,4 +1,4 @@
-namespace Step7.Infrastructure
+namespace Step8.Infrastructure
 
 type EventSource = System.Guid
 
@@ -22,6 +22,13 @@ type EventStore<'Event> =
     GetStream : EventSource -> EventEnvelope<'Event> list
     Append : EventEnvelope<'Event> list -> unit
     Subscribe : EventListener<'Event>-> unit
+  }
+
+type EventStorage<'Event> =
+  {
+    Get : unit -> EventEnvelope<'Event> list
+    GetStream : EventSource -> EventEnvelope<'Event> list
+    Append : EventEnvelope<'Event> list -> unit
   }
 
 type Projection<'State,'Event> =
@@ -53,6 +60,86 @@ type Behaviour<'Command,'Event> =
   'Command -> EventProducer<'Event>
 
 
+module EventStorage =
+
+  type Msg<'Event> =
+    private
+    | Get of AsyncReplyChannel<EventEnvelope<'Event> list>
+    | GetStream of EventSource * AsyncReplyChannel<EventEnvelope<'Event> list>
+    | Append of  EventEnvelope<'Event> list
+
+
+  module InMemory =
+
+    let private streamFor source history =
+      history
+      |> List.filter (fun envelope -> envelope.Source = source)
+
+    let initialize () : EventStorage<'Event> =
+      let history : EventEnvelope<'Event> list = []
+
+      let mailbox =
+        MailboxProcessor.Start(fun inbox ->
+          let rec loop history =
+            async {
+              let! msg = inbox.Receive()
+
+              match msg with
+              | Get reply ->
+                  reply.Reply history
+
+                  return! loop history
+
+              | GetStream (source,reply) ->
+                  history
+                  |> streamFor source
+                  |> reply.Reply
+
+                  return! loop history
+
+              | Append events ->
+                  return! loop (history @ events)
+            }
+
+          loop history
+        )
+
+      {
+        Get = fun () ->  mailbox.PostAndReply Get
+        GetStream = fun eventSource -> mailbox.PostAndReply (fun reply -> (eventSource,reply) |> GetStream)
+        Append = Append >> mailbox.Post
+      }
+
+                  return! loop (history,eventListeners)
+
+              | GetStream (source,reply) ->
+                  history
+                  |> streamFor source
+                  |> reply.Reply
+
+                  return! loop (history,eventListeners)
+
+              | Append events ->
+                  return! loop (history @ events, eventListeners)
+            }
+
+          loop (history,[])
+        )
+
+      let getStream eventSource =
+        mailbox.PostAndReply (fun reply -> (eventSource,reply) |> GetStream)
+
+      let append events =
+        events
+        |> Append
+        |> mailbox.Post
+
+      {
+        Get = fun () ->  mailbox.PostAndReply Get
+        GetStream = getStream
+        Append = append
+      }
+
 module EventStore =
 
   type Msg<'Event> =
@@ -61,49 +148,44 @@ module EventStore =
     | Append of  EventEnvelope<'Event> list
     | Subscribe of EventListener<'Event>
 
-  let streamFor source history =
-    history
-    |> List.filter (fun envelope -> envelope.Source = source)
-
   let notifyEventListeners events subscriptions =
     subscriptions
     |> List.iter (fun subscription -> events |> List.iter subscription)
 
-  let initialize () : EventStore<'Event> =
-    let history : EventEnvelope<'Event> list = []
-
+  let initialize (storage : EventStorage<_>) : EventStore<_> =
     let mailbox =
       MailboxProcessor.Start(fun inbox ->
-        let rec loop (history,eventListeners : EventListener<'Event> list) =
+        let rec loop (eventListeners : EventListener<'Event> list) =
           async {
             let! msg = inbox.Receive()
 
 
             match msg with
             | Get reply ->
-                reply.Reply history
+                storage.Get() |> reply.Reply
 
-                return! loop (history,eventListeners)
+                return! loop eventListeners
 
             | GetStream (source,reply) ->
-                history
-                |> streamFor source
+                source
+                |> storage.GetStream
                 |> reply.Reply
 
-                return! loop (history,eventListeners)
+                return! loop eventListeners
 
             | Append events ->
+                do events |> storage.Append
                 do eventListeners |> notifyEventListeners events
 
-                return! loop (history @ events, eventListeners)
+                return! loop eventListeners
 
             | Subscribe listener ->
-                do history |> List.iter listener
+                do storage.Get() |> List.iter listener
 
-                return! loop (history, listener :: eventListeners)
+                return! loop (listener :: eventListeners)
           }
 
-        loop (history,[])
+        loop []
       )
 
     let getStream eventSource =
