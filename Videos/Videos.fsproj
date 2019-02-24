@@ -12,10 +12,14 @@
     <Compile Include="Step7/Domain7.fs" />
     <Compile Include="Step7/Application7.fs" />
     <Compile Include="Step7/Tests7.fs" />
+    <Compile Include="Extensions/Seq.fs" />
     <Compile Include="Step8/Infrastructure8.fs" />
     <Compile Include="Step8/Domain8.fs" />
     <Compile Include="Step8/Application8.fs" />
     <Compile Include="Step8/Tests8.fs" />
+
+    <Compile Include="../Talk/UI/Helper.fs" />
+    <Compile Include="../Talk/UI/Menu.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
   <Import Project="..\.paket\Paket.Restore.targets" />
