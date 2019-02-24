@@ -110,35 +110,63 @@ module EventStorage =
         Append = Append >> mailbox.Post
       }
 
-                  return! loop (history,eventListeners)
+  module FileStorage =
+    open System.IO
+    open Thoth.Json.Net
 
-              | GetStream (source,reply) ->
-                  history
-                  |> streamFor source
+    let initialize store : EventStorage<'Event> =
+      if not <| File.Exists store then
+        do failwith <| sprintf "Event Store file '%s' does not exists." store
+
+      let mailbox =
+        MailboxProcessor.Start(fun inbox ->
+          let rec loop () =
+            async {
+              let! msg = inbox.Receive()
+
+              match msg with
+              | Get reply ->
+                  File.ReadLines(store)
+                  |> Seq.traverseResult Decode.Auto.fromString<EventEnvelope<'Event>>
+                  |> function | Ok res -> res | Error err -> failwith err
+                  |> List.ofSeq
                   |> reply.Reply
 
-                  return! loop (history,eventListeners)
+                  return! loop()
+
+              | GetStream (source,reply) ->
+                  File.ReadLines(store)
+                  |> Seq.traverseResult Decode.Auto.fromString<EventEnvelope<'Event>>
+                  |> function | Ok res -> res | Error err -> failwith err
+                  |> Array.ofSeq
+                  |> Array.filter (fun ee -> ee.Source = source)
+                  |> List.ofArray
+                  |> reply.Reply
+
+                  return! loop()
 
               | Append events ->
-                  return! loop (history @ events, eventListeners)
+                  using (new StreamWriter(store, true)) (
+                    fun streamWriter ->
+                      events
+                      |> List.map (fun eventEnvelope -> Encode.Auto.toString(0,eventEnvelope))
+                      |> List.iter streamWriter.WriteLine
+
+                      do streamWriter.Flush()
+                  )
+
+                  return! loop()
             }
 
-          loop (history,[])
+          loop ()
         )
-
-      let getStream eventSource =
-        mailbox.PostAndReply (fun reply -> (eventSource,reply) |> GetStream)
-
-      let append events =
-        events
-        |> Append
-        |> mailbox.Post
 
       {
         Get = fun () ->  mailbox.PostAndReply Get
-        GetStream = getStream
-        Append = append
+        GetStream = fun eventSource -> mailbox.PostAndReply (fun reply -> (eventSource,reply) |> GetStream)
+        Append = Append >> mailbox.Post
       }
+
 
 module EventStore =
 
