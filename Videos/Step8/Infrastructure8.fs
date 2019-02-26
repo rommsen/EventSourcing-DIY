@@ -114,6 +114,15 @@ module EventStorage =
     open System.IO
     open Thoth.Json.Net
 
+    let private writeEvents store events =
+      use streamWriter = new StreamWriter(store, true)
+      events
+      |> List.map (fun eventEnvelope -> Encode.Auto.toString(0,eventEnvelope))
+      |> List.iter streamWriter.WriteLine
+
+      do streamWriter.Flush()
+
+
     let initialize store : EventStorage<'Event> =
       if not <| File.Exists store then
         do failwith <| sprintf "Event Store file '%s' does not exists." store
@@ -146,14 +155,7 @@ module EventStorage =
                   return! loop()
 
               | Append events ->
-                  using (new StreamWriter(store, true)) (
-                    fun streamWriter ->
-                      events
-                      |> List.map (fun eventEnvelope -> Encode.Auto.toString(0,eventEnvelope))
-                      |> List.iter streamWriter.WriteLine
-
-                      do streamWriter.Flush()
-                  )
+                  do events |> writeEvents store
 
                   return! loop()
             }
