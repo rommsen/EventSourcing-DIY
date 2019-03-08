@@ -15,31 +15,23 @@ type EventEnvelope<'Event> =
 type EventListener<'Event> =
   EventEnvelope<'Event> -> unit
 
+type EventResult<'Event> =
+  Result<EventEnvelope<'Event> list, string>
 
 type EventStore<'Event> =
   {
-    Get : unit -> EventEnvelope<'Event> list
-    GetStream : EventSource -> EventEnvelope<'Event> list
+    Get : unit -> EventResult<'Event>
+    GetStream : EventSource -> EventResult<'Event>
     Append : EventEnvelope<'Event> list -> unit
     Subscribe : EventListener<'Event>-> unit
     OnError : IEvent<exn>
   }
-
-
-type InfrastructureError =
-  | Error of string
-  | Exception of exn
-
-
-type EventResult<'Event> =
-  Result<EventEnvelope<'Event> list, InfrastructureError>
 
 type EventStorage<'Event> =
   {
     Get : unit -> EventResult<'Event>
     GetStream : EventSource -> EventResult<'Event>
     Append : EventEnvelope<'Event> list -> unit
-    OnError : IEvent<exn>
   }
 
 type Projection<'State,'Event> =
@@ -63,7 +55,6 @@ type ReadModel<'Event, 'Query, 'Result> =
     QueryHandler : QueryHandler<'Query,'Result>
     OnError : IEvent<exn>
   }
-
 
 type CommandHandler<'Command> =
   {
@@ -91,6 +82,9 @@ type Agent<'T>(f:Agent<'T> -> Async<unit>) as self =
 
   /// Triggered when an unhandled exception occurs
   member __.OnError = errorEvent.Publish
+
+  member __.Trigger exn = errorEvent.Trigger exn
+
   /// Starts the mailbox processor
   member __.Start() = inbox.Start()
   /// Receive a message from the mailbox processor
@@ -124,13 +118,12 @@ type EventSourced<'Comand,'Event,'Query,'Result>
 
   do
     eventStore.OnError.Add(printfn "eventStore Error: %A")
-    eventStorage.OnError.Add(printfn "eventStorage Error: %A")
     commandHandler.OnError.Add(printfn "commandHandler Error: %A")
 
     readmodelsInit
     |> List.iter (fun readmodel ->
         let readmodel = readmodel()
-        eventStore.OnError.Add(printfn "EventStore Error: %A")
+        readmodel.OnError.Add(printfn "readmodel Error: %A")
         do readmodel.EventListener |> eventStore.Subscribe
         do readmodel.QueryHandler |> addQueryHandler)
 
@@ -159,6 +152,7 @@ module EventStorage =
 
     let private streamFor source history =
       history
+      |> List.filter (fun ee -> ee.Source = source)
 
     let initialize () : EventStorage<'Event> =
       let history : EventEnvelope<'Event> list = []
@@ -196,10 +190,10 @@ module EventStorage =
         Get = fun () ->  agent.PostAndReply Get
         GetStream = fun eventSource -> agent.PostAndReply (fun reply -> (eventSource,reply) |> GetStream)
         Append = Append >> agent.Post
-        OnError = agent.OnError
       }
 
   module FileStorage =
+
     open System.IO
     open Thoth.Json.Net
 
@@ -211,68 +205,49 @@ module EventStorage =
 
       do streamWriter.Flush()
 
+    let private get store =
+      store
+      |> File.ReadLines
+      |> Seq.traverseResult Decode.Auto.fromString<EventEnvelope<'Event>>
+      |> Result.map List.ofSeq
 
-    let initialize store : EventStorage<'Event> =
-      let agent =
-        Agent<Msg<_>>.Start(fun inbox ->
-          let rec loop () =
-            async {
-              let! msg = inbox.Receive()
+    let private getStream store source =
+      store
+      |> File.ReadLines
+      |> Seq.traverseResult Decode.Auto.fromString<EventEnvelope<'Event>>
+      |> Result.map (Seq.filter (fun ee -> ee.Source = source) >> List.ofSeq)
 
-              match msg with
-              | Get reply ->
-                  File.ReadLines(store)
-                  |> Seq.traverseResult Decode.Auto.fromString<EventEnvelope<'Event>>
-                  |> fun x -> x
-                  |> Result.mapError Error
-                  |> Result.map List.ofSeq
-                  |> reply.Reply
+    let private append store events =
+      use streamWriter = new StreamWriter(store, true)
+      events
+      |> List.map (fun eventEnvelope -> Encode.Auto.toString(0,eventEnvelope))
+      |> List.iter streamWriter.WriteLine
 
-                  return! loop()
+      do streamWriter.Flush()
 
-              | GetStream (source,reply) ->
-                  File.ReadLines(store)
-                  |> Seq.traverseResult Decode.Auto.fromString<EventEnvelope<'Event>>
-                  |> Result.mapError Error
-                  |> Result.map (Seq.filter (fun ee -> ee.Source = source) >> List.ofSeq)
-                  |> reply.Reply
 
-                  return! loop()
-
-              | Append events ->
-                  do events |> writeEvents store
-
-                  return! loop()
-            }
-
-          loop ()
-        )
-
+    let initialize store : EventStorage<_> =
       {
-        Get = fun () ->  agent.PostAndReply Get
-        GetStream = fun eventSource -> agent.PostAndReply (fun reply -> (eventSource,reply) |> GetStream)
-        Append = Append >> agent.Post
-        OnError = agent.OnError
+        Get = fun () -> get store
+        GetStream = getStream store
+        Append = append store
       }
+
 
 
 module EventStore =
 
   type Msg<'Event> =
-    | Get of AsyncReplyChannel<EventEnvelope<'Event> list>
-    | GetStream of EventSource * AsyncReplyChannel<EventEnvelope<'Event> list>
-    | Append of  EventEnvelope<'Event> list
+    | Get of AsyncReplyChannel<EventResult<'Event>>
+    | GetStream of EventSource * AsyncReplyChannel<EventResult<'Event>>
+    | Append of EventEnvelope<'Event> list
     | Subscribe of EventListener<'Event>
 
   let notifyEventListeners events subscriptions =
     subscriptions
     |> List.iter (fun subscription -> events |> List.iter subscription)
 
-  let initialize (onError: InfrastructureError -> unit) (storage : EventStorage<_>) : EventStore<_> =
-    let handleResult success failure result =
-      match result with
-      | Ok result -> result |> success
-      | Result.Error error -> error |> failure
+  let initialize (storage : EventStorage<_>) : EventStore<_> =
 
     let agent =
       Agent<Msg<_>>.Start(fun inbox ->
@@ -283,28 +258,47 @@ module EventStore =
 
             match msg with
             | Get reply ->
-                storage.Get()
-                |> handleResult reply.Reply onError
+                try
+                  storage.Get()
+                  |> reply.Reply
+
+                with exn ->
+                  inbox.Trigger(exn)
+                  exn.Message |> Error |> reply.Reply
 
                 return! loop eventListeners
 
+
             | GetStream (source,reply) ->
-                source
-                |> storage.GetStream
-                |> handleResult reply.Reply onError
+                try
+                  source
+                  |> storage.GetStream
+                  |> reply.Reply
+
+                with exn ->
+                  inbox.Trigger(exn)
+                  exn.Message |> Error |> reply.Reply
 
                 return! loop eventListeners
 
             | Append events ->
-                do events |> storage.Append
-                do eventListeners |> notifyEventListeners events
+                try
+                  do events |> storage.Append
+                  do eventListeners |> notifyEventListeners events
+
+                with exn ->
+                  inbox.Trigger(exn)
 
                 return! loop eventListeners
 
             | Subscribe listener ->
-                do
-                  storage.Get()
-                  |> handleResult (List.iter listener) onError
+                try
+                  do
+                    storage.Get()
+                    |> function | Ok result -> result |> List.iter listener | _ -> ()
+
+                with exn ->
+                  inbox.Trigger(exn)
 
                 return! loop (listener :: eventListeners)
           }
@@ -354,15 +348,12 @@ module CommandHandler =
           async {
             let! msg = inbox.Receive()
 
-
             match msg with
             | Handle (eventSource,command) ->
                 eventSource
                 |> eventStore.GetStream
-                |> asEvents
-                |> behaviour command
-                |> enveloped eventSource
-                |> eventStore.Append
+                |> Result.map (asEvents >> behaviour command >> enveloped eventSource)
+                |> function | Ok events -> events |> eventStore.Append | _ -> ()
 
                 return! loop ()
           }
@@ -445,6 +436,8 @@ module QueryHandler =
       * MBs abbrechen oder nicht bei Exception?
       * Wie mit Results umgehen (serialize,deserialize), soll hier eine Exception geworfen werden oder nicht?
       * Idee: Ich kann auf das OnError der EventStorage im EventStore hören
+      * Idee: Result + Error Event für Exception
+      * Idee: EventStorage nicht als Agent
 
 
   *)
