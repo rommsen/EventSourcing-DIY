@@ -17,6 +17,10 @@
     <Compile Include="Step8/Domain8.fs" />
     <Compile Include="Step8/Application8.fs" />
     <Compile Include="Step8/Tests8.fs" />
+    <Compile Include="Step9/Infrastructure9.fs" />
+    <Compile Include="Step9/Domain9.fs" />
+    <Compile Include="Step9/Application9.fs" />
+    <Compile Include="Step9/Tests9.fs" />
 
     <Compile Include="../Talk/UI/Helper.fs" />
     <Compile Include="../Talk/UI/Menu.fs" />

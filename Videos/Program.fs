@@ -1,8 +1,8 @@
 module Helper =
 
   open Expecto
-  open Step8.Domain
-  open Step8.Tests
+  open Step9.Domain
+  open Step9.Tests
 
   let printUl list =
     list
@@ -38,9 +38,9 @@ module Helper =
 
 
 
-open Step8.Infrastructure
-open Step8.Application
-open Step8.Domain
+open Step9.Infrastructure
+open Step9.Application
+open Step9.Domain
 open Helper
 
 [<EntryPoint>]
@@ -53,28 +53,24 @@ let main _ =
   let truck1 = Truck <| System.Guid.Parse "49d9d107-aceb-4b2d-a7e3-eca784a9de6e"
   let truck2 = Truck <| System.Guid.Parse "8b916bde-6bdf-43cc-b43b-69c9f4c3e5c4"
 
-  let eventStore : EventStore<Event> =
-    @"C:\temp\store.txt"
-    |> EventStorage.FileStorage.initialize
-    |> EventStore.initialize
-
-
-  let commandHandler : CommandHandler<Command> =
+  let commandHandlerInit eventStore : CommandHandler<Command> =
     CommandHandler.initialize Behaviour.behaviour eventStore
-
-  let queryHandler,addQueryHandler =
-    QueryHandler.initialize()
 
   let readmodels =
     [
-      Readmodels.flavoursInStock()
-      Readmodels.trucks()
+      Readmodels.flavoursInStock
+      Readmodels.trucks
     ]
 
-  readmodels
-  |> List.iter (fun readmodel ->
-      do readmodel.EventListener |> eventStore.Subscribe
-      do readmodel.QueryHandler |> addQueryHandler)
+
+  let eventSourced =
+    EventSourced(
+      EventStore.initialize (printfn "Error %A"),
+      (fun () -> @"C:\temp\store.txt" |> EventStorage.FileStorage.initialize),
+      CommandHandler.initialize Behaviour.behaviour,
+      QueryHandler.initialize,
+      readmodels
+    )
 
 
   let truck1_guid = guid truck1
@@ -83,21 +79,21 @@ let main _ =
 
   let main =
     [
-      ("Total History", eventStore.Get >> printEvents "all" >> UI.Helper.waitForAnyKey)
-      ("History Truck 1", fun () -> truck1_guid |> eventStore.GetStream |> printEvents "Truck 1" |>  UI.Helper.waitForAnyKey)
-      ("History Truck 2", fun () -> truck2_guid |> eventStore.GetStream |> printEvents "Truck 2" |>  UI.Helper.waitForAnyKey)
-      ("Query.FlavoursInStock (truck1, Vanilla)", fun () -> API.Query.FlavoursInStock (truck1, Vanilla) |> queryHandler |> printfn "Stock Truck 1 Vanilla: %A" |> UI.Helper.waitForAnyKey)
-      ("Query.FlavoursInStock (truck2, Vanilla)", fun () -> API.Query.FlavoursInStock (truck2, Vanilla) |> queryHandler |> printfn "Stock Truck 2 Vanilla %A" |> UI.Helper.waitForAnyKey)
-      ("Query.FlavoursInStock (truck1, Strawberry)", fun () -> API.Query.FlavoursInStock (truck1, Strawberry) |> queryHandler |> printfn "Stock Truck 1 Strawberry: %A" |> UI.Helper.waitForAnyKey)
-      ("Query.FlavoursInStock (truck2, Strawberry)", fun () -> API.Query.FlavoursInStock (truck2, Strawberry) |> queryHandler |> printfn "Stock Truck 2 Strawberry %A" |> UI.Helper.waitForAnyKey)
-      ("Sell_flavour (truck1, Vanilla)", fun () -> Sell_flavour (truck1, Vanilla) |> commandHandler.Handle truck1_guid)
-      ("Sell_flavour (truck2, Vanilla)", fun () -> Sell_flavour (truck2, Vanilla) |> commandHandler.Handle truck2_guid)
-      ("Sell_flavour (truck1, Strawberry)", fun () -> Sell_flavour (truck1, Strawberry) |> commandHandler.Handle truck1_guid)
-      ("Sell_flavour (truck2, Strawberry)", fun () -> Sell_flavour (truck2, Strawberry) |> commandHandler.Handle truck2_guid)
-      ("Restock_flavour (truck1, Vanilla, 5)", fun () -> Restock_flavour (truck1, Vanilla, 5) |> commandHandler.Handle truck1_guid)
-      ("Restock_flavour (truck2, Vanilla, 5)", fun () -> Restock_flavour (truck2, Vanilla, 5) |> commandHandler.Handle truck2_guid)
-      ("Restock_flavour (truck1, Strawberry, 5)", fun () -> Restock_flavour (truck1, Strawberry, 5) |> commandHandler.Handle truck1_guid)
-      ("Restock_flavour (truck2, Strawberry, 5)", fun () -> Restock_flavour (truck2, Strawberry, 5) |> commandHandler.Handle truck2_guid)
+      ("Total History", eventSourced.GetAllEvents >> printEvents "all" >> UI.Helper.waitForAnyKey)
+      ("History Truck 1", fun () -> truck1_guid |> eventSourced.GetStream |> printEvents "Truck 1" |>  UI.Helper.waitForAnyKey)
+      ("History Truck 2", fun () -> truck2_guid |> eventSourced.GetStream |> printEvents "Truck 2" |>  UI.Helper.waitForAnyKey)
+      ("Query.FlavoursInStock (truck1, Vanilla)", fun () -> API.Query.FlavoursInStock (truck1, Vanilla) |> eventSourced.HandleQuery |> printfn "Stock Truck 1 Vanilla: %A" |> UI.Helper.waitForAnyKey)
+      ("Query.FlavoursInStock (truck2, Vanilla)", fun () -> API.Query.FlavoursInStock (truck2, Vanilla) |> eventSourced.HandleQuery |> printfn "Stock Truck 2 Vanilla %A" |> UI.Helper.waitForAnyKey)
+      ("Query.FlavoursInStock (truck1, Strawberry)", fun () -> API.Query.FlavoursInStock (truck1, Strawberry) |> eventSourced.HandleQuery |> printfn "Stock Truck 1 Strawberry: %A" |> UI.Helper.waitForAnyKey)
+      ("Query.FlavoursInStock (truck2, Strawberry)", fun () -> API.Query.FlavoursInStock (truck2, Strawberry) |> eventSourced.HandleQuery |> printfn "Stock Truck 2 Strawberry %A" |> UI.Helper.waitForAnyKey)
+      ("Sell_flavour (truck1, Vanilla)", fun () -> Sell_flavour (truck1, Vanilla) |> eventSourced.HandleCommand truck1_guid)
+      ("Sell_flavour (truck2, Vanilla)", fun () -> Sell_flavour (truck2, Vanilla) |> eventSourced.HandleCommand truck2_guid)
+      ("Sell_flavour (truck1, Strawberry)", fun () -> Sell_flavour (truck1, Strawberry) |> eventSourced.HandleCommand truck1_guid)
+      ("Sell_flavour (truck2, Strawberry)", fun () -> Sell_flavour (truck2, Strawberry) |> eventSourced.HandleCommand truck2_guid)
+      ("Restock_flavour (truck1, Vanilla, 5)", fun () -> Restock_flavour (truck1, Vanilla, 5) |> eventSourced.HandleCommand truck1_guid)
+      ("Restock_flavour (truck2, Vanilla, 5)", fun () -> Restock_flavour (truck2, Vanilla, 5) |> eventSourced.HandleCommand truck2_guid)
+      ("Restock_flavour (truck1, Strawberry, 5)", fun () -> Restock_flavour (truck1, Strawberry, 5) |> eventSourced.HandleCommand truck1_guid)
+      ("Restock_flavour (truck2, Strawberry, 5)", fun () -> Restock_flavour (truck2, Strawberry, 5) |> eventSourced.HandleCommand truck2_guid)
     ], ignore
 
   main
