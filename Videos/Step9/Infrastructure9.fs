@@ -43,17 +43,17 @@ type Projection<'State,'Event> =
 type QueryResult<'Result> =
   | Handled of obj
   | NotHandled
+  | QueryError of string
 
 type  QueryHandler<'Query,'Result> =
   {
-    Handle : 'Query -> QueryResult<'Result>
+    Handle : 'Query -> Async<QueryResult<'Result>>
   }
 
-type ReadModel<'Event, 'Query, 'Result> =
+type ReadModel<'Event, 'State> =
   {
     EventListener : EventListener<'Event>
-    QueryHandler : QueryHandler<'Query,'Result>
-    OnError : IEvent<exn>
+    State : unit -> Async<'State>
   }
 
 type CommandHandler<'Command> =
@@ -94,6 +94,8 @@ type Agent<'T>(f:Agent<'T> -> Async<unit>) as self =
 
   member __.PostAndReply(f: AsyncReplyChannel<'a> -> 'T) = inbox.PostAndReply f
 
+  member __.PostAndAsyncReply(f: AsyncReplyChannel<'a> -> 'T) = inbox.PostAndAsyncReply f
+
   /// Start the mailbox processor
   static member Start f =
     let agent = new Agent<_>(f)
@@ -105,8 +107,8 @@ type EventSourced<'Comand,'Event,'Query,'Result>
   (eventStoreInit : EventStorage<'Event> -> EventStore<'Event>,
    eventStorageInit : unit -> EventStorage<'Event>,
    commandHandlerInit : EventStore<'Event> -> CommandHandler<'Comand>,
-   queryHandlerInit : unit -> QueryHandler<'Query,'Result> * (QueryHandler<'Query,'Result> -> unit),
-   readmodelsInit : (unit -> ReadModel<'Event, 'Query, 'Result>) list) =
+   queryHandler : QueryHandler<'Query,'Result>,
+   eventListener : EventListener<'Event> list) =
 
   let eventStorage = eventStorageInit()
 
@@ -114,18 +116,14 @@ type EventSourced<'Comand,'Event,'Query,'Result>
 
   let commandHandler = commandHandlerInit eventStore
 
-  let queryHandler,addQueryHandler = queryHandlerInit()
+  let queryHandler = queryHandler
 
   do
     eventStore.OnError.Add(printfn "eventStore Error: %A")
     commandHandler.OnError.Add(printfn "commandHandler Error: %A")
 
-    readmodelsInit
-    |> List.iter (fun readmodel ->
-        let readmodel = readmodel()
-        readmodel.OnError.Add(printfn "readmodel Error: %A")
-        do readmodel.EventListener |> eventStore.Subscribe
-        do readmodel.QueryHandler |> addQueryHandler)
+    eventListener
+    |> List.iter (eventStore.Subscribe)
 
   member __.HandleCommand eventSource command =
     commandHandler.Handle eventSource command
@@ -232,7 +230,6 @@ module EventStorage =
         GetStream = getStream store
         Append = append store
       }
-
 
 
 module EventStore =
@@ -367,58 +364,27 @@ module CommandHandler =
     }
 
 module QueryHandler =
-
-  type Msg<'Query,'Result> =
-    | Query of 'Query * AsyncReplyChannel<QueryResult<'Result>>
-    | AddHandler of QueryHandler<'Query, 'Result>
-
   let rec private choice (queryHandler : QueryHandler<_,_> list) query =
-    match queryHandler with
-    | handler :: rest ->
-        match handler.Handle query with
-        | NotHandled ->
-            choice rest query
+    async {
+      match queryHandler with
+      | handler :: rest ->
+          match! handler.Handle query with
+          | NotHandled ->
+              return! choice rest query
 
-        | Handled response ->
-            Handled response
+          | Handled response ->
+              return Handled response
 
-    | _ -> NotHandled
+          | QueryError response ->
+              return QueryError response
 
-  let initialize () : QueryHandler<_,_> * (QueryHandler<_,_> -> unit) =
-    let agent =
-      Agent<Msg<_,_>>.Start(fun inbox ->
-        let rec loop queryHandler =
-          async {
-            let! msg = inbox.Receive()
+      | _ -> return NotHandled
+    }
 
-            match msg with
-            | Query (query,reply)->
-                choice queryHandler query
-                |> reply.Reply
-
-                return! loop queryHandler
-
-            | AddHandler handler ->
-                return! loop (handler :: queryHandler)
-          }
-
-        loop []
-      )
-
-    let queryHandler : QueryHandler<_,_> =
-      {
-        Handle = fun query -> agent.PostAndReply(fun reply -> Query (query,reply))
-      }
-
-
-    let addQueryHandler =
-      AddHandler >> agent.Post
-
-    queryHandler,addQueryHandler
-
-
-
-
+  let initialize queryHandlers : QueryHandler<_,_> =
+   {
+      Handle = choice queryHandlers
+   }
 
   (*
     Event Storage -> Fehler zu EventStore. Wie damit umgehen? Wenn Exception dann? Ist selber MB, also dürfen wir hier auch nicht
@@ -432,12 +398,15 @@ module QueryHandler =
 
 
     TODO:
-      * Checken was passiert, wenn mit Agent passiert, wenn der einen Agent aufruft und hier eine Exception auftritt
-      * MBs abbrechen oder nicht bei Exception?
-      * Wie mit Results umgehen (serialize,deserialize), soll hier eine Exception geworfen werden oder nicht?
-      * Idee: Ich kann auf das OnError der EventStorage im EventStore hören
-      * Idee: Result + Error Event für Exception
-      * Idee: EventStorage nicht als Agent
+      * Checken was passiert, wenn mit Agent passiert, wenn der einen Agent aufruft und hier eine Exception auftritt -> geht kaputt
+      * MBs abbrechen oder nicht bei Exception? -> nein
+      * Wie mit Results umgehen (serialize,deserialize), soll hier eine Exception geworfen werden oder nicht? -> nein
+      * Idee: Ich kann auf das OnError der EventStorage im EventStore hören -> eventStorage ist nicht mehr MB
+      * Idee: Result + Error Event für Exception -> erledigt
+      * Idee: EventStorage nicht als Agent -> erledigt
+
+      * Auf Query Result Async hören
+      * QueryHandler müssen ein Result zurückgeben
 
 
   *)

@@ -38,6 +38,7 @@ module Helper =
 open Step9.Infrastructure
 open Step9.Application
 open Step9.Domain
+open API
 open Helper
 
 [<EntryPoint>]
@@ -50,10 +51,15 @@ let main _ =
   let truck1 = Truck <| System.Guid.Parse "49d9d107-aceb-4b2d-a7e3-eca784a9de6e"
   let truck2 = Truck <| System.Guid.Parse "8b916bde-6bdf-43cc-b43b-69c9f4c3e5c4"
 
-  let readmodels =
+  let flavoursReadmodel = InMemoryReadmodels.flavoursInStock()
+  let queryHandlers =
     [
-      Readmodels.flavoursInStock
-      Readmodels.trucks
+      QueryHandlers.flavours flavoursReadmodel.State
+    ]
+
+  let eventListener =
+    [
+      flavoursReadmodel.EventListener
     ]
 
   let app =
@@ -61,8 +67,8 @@ let main _ =
       EventStore.initialize,
       (fun () -> @"C:\temp\store.txt" |> EventStorage.FileStorage.initialize),
       CommandHandler.initialize Behaviour.behaviour,
-      QueryHandler.initialize,
-      readmodels
+      QueryHandler.initialize queryHandlers,
+      eventListener
     )
 
   let truck1_guid = guid truck1
@@ -73,10 +79,10 @@ let main _ =
       ("Total History", app.GetAllEvents >> printEvents "all" >> UI.Helper.waitForAnyKey)
       ("History Truck 1", fun () -> truck1_guid |> app.GetStream |> printEvents "Truck 1" |>  UI.Helper.waitForAnyKey)
       ("History Truck 2", fun () -> truck2_guid |> app.GetStream |> printEvents "Truck 2" |>  UI.Helper.waitForAnyKey)
-      ("Query.FlavoursInStock (truck1, Vanilla)", fun () -> API.Query.FlavoursInStock (truck1, Vanilla) |> app.HandleQuery |> printfn "Stock Truck 1 Vanilla: %A" |> UI.Helper.waitForAnyKey)
-      ("Query.FlavoursInStock (truck2, Vanilla)", fun () -> API.Query.FlavoursInStock (truck2, Vanilla) |> app.HandleQuery |> printfn "Stock Truck 2 Vanilla %A" |> UI.Helper.waitForAnyKey)
-      ("Query.FlavoursInStock (truck1, Strawberry)", fun () -> API.Query.FlavoursInStock (truck1, Strawberry) |> app.HandleQuery |> printfn "Stock Truck 1 Strawberry: %A" |> UI.Helper.waitForAnyKey)
-      ("Query.FlavoursInStock (truck2, Strawberry)", fun () -> API.Query.FlavoursInStock (truck2, Strawberry) |> app.HandleQuery |> printfn "Stock Truck 2 Strawberry %A" |> UI.Helper.waitForAnyKey)
+      ("Query.FlavoursInStock (truck1, Vanilla)", fun () -> FlavourInStockOfTruck (truck1, Vanilla) |> app.HandleQuery |> Async.RunSynchronously |> printfn "Stock Truck 1 Vanilla: %A" |> UI.Helper.waitForAnyKey)
+      ("Query.FlavoursInStock (truck2, Vanilla)", fun () -> FlavourInStockOfTruck (truck2, Vanilla) |> app.HandleQuery |> Async.RunSynchronously |> printfn "Stock Truck 2 Vanilla %A" |> UI.Helper.waitForAnyKey)
+      ("Query.FlavoursInStock (truck1, Strawberry)", fun () -> FlavourInStockOfTruck (truck1, Strawberry) |> app.HandleQuery |> Async.RunSynchronously |> printfn "Stock Truck 1 Strawberry: %A" |> UI.Helper.waitForAnyKey)
+      ("Query.FlavoursInStock (truck2, Strawberry)", fun () -> FlavourInStockOfTruck (truck2, Strawberry) |> app.HandleQuery |> Async.RunSynchronously |> printfn "Stock Truck 2 Strawberry %A" |> UI.Helper.waitForAnyKey)
       ("Sell_flavour (truck1, Vanilla)", fun () -> Sell_flavour (truck1, Vanilla) |> app.HandleCommand truck1_guid)
       ("Sell_flavour (truck2, Vanilla)", fun () -> Sell_flavour (truck2, Vanilla) |> app.HandleCommand truck2_guid)
       ("Sell_flavour (truck1, Strawberry)", fun () -> Sell_flavour (truck1, Strawberry) |> app.HandleCommand truck1_guid)
