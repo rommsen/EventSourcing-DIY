@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>netcoreapp2.1</TargetFramework>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="Extensions/Seq.fs" />
+    <Compile Include="Infrastructure.fs" />
+    <Compile Include="Domain.fs" />
+    <Compile Include="Application.fs" />
+    <Compile Include="Tests.fs" />
+    <Compile Include="../Talk/UI/Helper.fs" />
+    <Compile Include="../Talk/UI/Menu.fs" />
+    <Compile Include="Program.fs" />
+  </ItemGroup>
+  <Import Project="..\.paket\Paket.Restore.targets" />
+</Project>
