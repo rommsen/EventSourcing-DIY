@@ -20,18 +20,18 @@ type EventResult<'Event> =
 
 type EventStore<'Event> =
   {
-    Get : unit -> EventResult<'Event>
-    GetStream : EventSource -> EventResult<'Event>
-    Append : EventEnvelope<'Event> list -> unit
-    Subscribe : EventListener<'Event>-> unit
+    Get : unit -> Async<EventResult<'Event>>
+    GetStream : EventSource -> Async<EventResult<'Event>>
+    Append : EventEnvelope<'Event> list -> Async<Result<unit, string>>
+    Subscribe : EventListener<'Event> -> Async<Result<unit, string>>
     OnError : IEvent<exn>
   }
 
 type EventStorage<'Event> =
   {
-    Get : unit -> EventResult<'Event>
-    GetStream : EventSource -> EventResult<'Event>
-    Append : EventEnvelope<'Event> list -> unit
+    Get : unit -> Async<EventResult<'Event>>
+    GetStream : EventSource -> Async<EventResult<'Event>>
+    Append : EventEnvelope<'Event> list -> Async<unit>
   }
 
 type Projection<'State,'Event> =
@@ -123,7 +123,7 @@ type EventSourced<'Comand,'Event,'Query,'Result>
     commandHandler.OnError.Add(printfn "commandHandler Error: %A")
 
     eventListener
-    |> List.iter (eventStore.Subscribe)
+    |> List.iter (eventStore.Subscribe >> ignore)
 
   member __.HandleCommand eventSource command =
     commandHandler.Handle eventSource command
@@ -143,10 +143,10 @@ module EventStorage =
     private
     | Get of AsyncReplyChannel<EventResult<'Event>>
     | GetStream of EventSource * AsyncReplyChannel<EventResult<'Event>>
-    | Append of EventEnvelope<'Event> list
+    | Append of EventEnvelope<'Event> list * AsyncReplyChannel<unit>
 
 
-  module InMemory =
+  module InMemoryStorage =
 
     let private streamFor source history =
       history
@@ -177,7 +177,8 @@ module EventStorage =
 
                   return! loop history
 
-              | Append events ->
+              | Append (events,reply) ->
+                  reply.Reply ()
                   return! loop (history @ events)
             }
 
@@ -185,9 +186,9 @@ module EventStorage =
         )
 
       {
-        Get = fun () ->  agent.PostAndReply Get
-        GetStream = fun eventSource -> agent.PostAndReply (fun reply -> (eventSource,reply) |> GetStream)
-        Append = Append >> agent.Post
+        Get = fun () ->  agent.PostAndAsyncReply Get
+        GetStream = fun eventSource -> agent.PostAndAsyncReply (fun reply -> (eventSource,reply) |> GetStream)
+        Append = fun events -> agent.PostAndAsyncReply (fun reply -> (events,reply) |> Append)
       }
 
   module FileStorage =
@@ -226,9 +227,9 @@ module EventStorage =
 
     let initialize store : EventStorage<_> =
       {
-        Get = fun () -> get store
-        GetStream = getStream store
-        Append = append store
+        Get = fun () -> async { return get store }
+        GetStream = fun eventSource -> async { return getStream store eventSource  }
+        Append = fun events -> async { return append store events }
       }
 
 
@@ -237,8 +238,8 @@ module EventStore =
   type Msg<'Event> =
     | Get of AsyncReplyChannel<EventResult<'Event>>
     | GetStream of EventSource * AsyncReplyChannel<EventResult<'Event>>
-    | Append of EventEnvelope<'Event> list
-    | Subscribe of EventListener<'Event>
+    | Append of EventEnvelope<'Event> list * AsyncReplyChannel<Result<unit,string>>
+    | Subscribe of EventListener<'Event> * AsyncReplyChannel<Result<unit,string>>
 
   let notifyEventListeners events subscriptions =
     subscriptions
@@ -250,14 +251,12 @@ module EventStore =
       Agent<Msg<_>>.Start(fun inbox ->
         let rec loop (eventListeners : EventListener<'Event> list) =
           async {
-            let! msg = inbox.Receive()
-
-
-            match msg with
+            match! inbox.Receive() with
             | Get reply ->
                 try
-                  storage.Get()
-                  |> reply.Reply
+                  let! events = storage.Get()
+
+                  events |> reply.Reply
 
                 with exn ->
                   inbox.Trigger(exn)
@@ -268,8 +267,9 @@ module EventStore =
 
             | GetStream (source,reply) ->
                 try
-                  source
-                  |> storage.GetStream
+                  let! stream = source |> storage.GetStream
+
+                  stream
                   |> reply.Reply
 
                 with exn ->
@@ -278,21 +278,29 @@ module EventStore =
 
                 return! loop eventListeners
 
-            | Append events ->
+            | Append (events,reply) ->
                 try
-                  do events |> storage.Append
+                  do! events |> storage.Append
                   do eventListeners |> notifyEventListeners events
 
                 with exn ->
                   inbox.Trigger(exn)
+                  exn.Message |> Error |> reply.Reply
 
                 return! loop eventListeners
 
-            | Subscribe listener ->
+            | Subscribe (listener,reply) ->
                 try
-                  do
-                    storage.Get()
-                    |> function | Ok result -> result |> List.iter listener | _ -> ()
+                  let! events = storage.Get()
+
+                  events
+                  |> function
+                      | Ok result ->
+                          do result |> List.iter listener
+                          do reply.Reply (Ok ())
+
+                      | Error err ->
+                          do reply.Reply (Error err)
 
                 with exn ->
                   inbox.Trigger(exn)
@@ -303,24 +311,11 @@ module EventStore =
         loop []
       )
 
-    let getStream eventSource =
-      agent.PostAndReply (fun reply -> (eventSource,reply) |> GetStream)
-
-    let append events =
-      events
-      |> Append
-      |> agent.Post
-
-    let subscribe (subscription : EventListener<_>) =
-      subscription
-      |> Subscribe
-      |> agent.Post
-
     {
-      Get = fun () ->  agent.PostAndReply Get
-      GetStream = getStream
-      Append = append
-      Subscribe = subscribe
+      Get = fun () -> agent.PostAndAsyncReply Get
+      GetStream = fun eventSource -> agent.PostAndAsyncReply (fun reply -> GetStream (eventSource,reply))
+      Append = fun events -> agent.PostAndAsyncReply (fun reply -> Append (events,reply))
+      Subscribe = fun subscription -> agent.PostAndAsyncReply (fun reply -> Subscribe (subscription, reply))
       OnError = agent.OnError
     }
 
@@ -347,10 +342,11 @@ module CommandHandler =
 
             match msg with
             | Handle (eventSource,command) ->
-                eventSource
-                |> eventStore.GetStream
-                |> Result.map (asEvents >> behaviour command >> enveloped eventSource)
-                |> function | Ok events -> events |> eventStore.Append | _ -> ()
+                let! stream = eventSource |> eventStore.GetStream
+
+                stream
+                |> Result.map (asEvents >> behaviour command >> enveloped eventSource >> eventStore.Append)
+                |> ignore
 
                 return! loop ()
           }
@@ -405,8 +401,18 @@ module QueryHandler =
       * Idee: Result + Error Event für Exception -> erledigt
       * Idee: EventStorage nicht als Agent -> erledigt
 
-      * Auf Query Result Async hören
-      * QueryHandler müssen ein Result zurückgeben
+      * Auf Query Result Async hören -> erledigt
+      * QueryHandler müssen ein Result zurückgeben -> erledigt
+      * QueryHandler nicht mehr Agent -> erledigt
+      * EventStorage Async -> erledigt
+      * EventStore Async -> erledigt
+      * Alles gibt ein Ergebnis zurück. Zum Beispiel auch Append
+      * Gedanken was muss Async sein, was blockend, was Agent
+      * Exceptions vs Results
+      * Subscribe: FromNow (z.B. Live Stream aller incoming events, elmish app), FromX (persistent readmodel), FromBeginning (memory readmodel)
+      * Persistent Readmodel
+      * nochmal Gedanken zu messaging (commandHandler ohne result oder mit?)
+      * tests
 
 
   *)
