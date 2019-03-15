@@ -1,3 +1,4 @@
+open Infrastructure
 module Helper =
 
   open Expecto
@@ -13,21 +14,51 @@ module Helper =
     | Ok events ->
         events
         |> List.length
-        |> printfn "History for %s (Length: %i)" header
+        |> printfn "\nHistory for %s (Length: %i)" header
 
         events |> printUl
 
-    | Error error -> printfn "Could not printEvents: %A" error
+    | Error error -> UI.Helper.printError (sprintf "Error when retrieving events: %s" error) ""
+
+    UI.Helper.waitForAnyKey()
+
+  let printCommandResults header result =
+    match result with
+    | Ok _ ->
+        printfn "\n%s: %A" header result
+
+    | Error error ->
+        UI.Helper.printError (sprintf "Command Error: %s" error) ""
+
+    UI.Helper.waitForAnyKey()
+
+
+
+  let printQueryResults header result =
+    match result with
+    | QueryResult.Handled result ->
+        printfn "\n%s: %A" header result
+
+    | QueryResult.NotHandled ->
+        printfn "\n%s: NOT HANDLED" header
+
+    | QueryResult.QueryError error ->
+        UI.Helper.printError (sprintf "Query Error: %s" error) ""
+
+    UI.Helper.waitForAnyKey()
 
   let printSoldFlavour flavour state =
     state
     |> Projections.soldOfFlavour flavour
-    |> printfn "Sold %A: %i" flavour
+    |> printfn "\nSold %A: %i" flavour
 
   let printStockOf flavour state =
     state
     |> Projections.stockOf flavour
-    |> printfn "Stock of %A: %i" flavour
+    |> printfn "\nStock of %A: %i" flavour
+
+  let runAsync asnc =
+    asnc |> Async.RunSynchronously
 
 
   let runTests () =
@@ -35,7 +66,6 @@ module Helper =
 
 
 
-open Infrastructure
 open Application
 open Domain
 open API
@@ -74,26 +104,23 @@ let main _ =
   let truck1_guid = guid truck1
   let truck2_guid = guid truck2
 
-  let run asnc =
-    asnc |> Async.RunSynchronously
-
   let main =
     [
-      ("Total History", app.GetAllEvents >> run >> printEvents "all" >> UI.Helper.waitForAnyKey)
-      ("History Truck 1", fun () -> truck1_guid |> app.GetStream |> run |> printEvents "Truck 1" |>  UI.Helper.waitForAnyKey)
-      ("History Truck 2", fun () -> truck2_guid |> app.GetStream |> run |> printEvents "Truck 2" |>  UI.Helper.waitForAnyKey)
-      ("Query.FlavoursInStock (truck1, Vanilla)", fun () -> FlavourInStockOfTruck (truck1, Vanilla) |> app.HandleQuery |> run |> printfn "Stock Truck 1 Vanilla: %A" |> UI.Helper.waitForAnyKey)
-      ("Query.FlavoursInStock (truck2, Vanilla)", fun () -> FlavourInStockOfTruck (truck2, Vanilla) |> app.HandleQuery |> run |> printfn "Stock Truck 2 Vanilla %A" |> UI.Helper.waitForAnyKey)
-      ("Query.FlavoursInStock (truck1, Strawberry)", fun () -> FlavourInStockOfTruck (truck1, Strawberry) |> app.HandleQuery |> run |> printfn "Stock Truck 1 Strawberry: %A" |> UI.Helper.waitForAnyKey)
-      ("Query.FlavoursInStock (truck2, Strawberry)", fun () -> FlavourInStockOfTruck (truck2, Strawberry) |> app.HandleQuery |> run |> printfn "Stock Truck 2 Strawberry %A" |> UI.Helper.waitForAnyKey)
-      ("Sell_flavour (truck1, Vanilla)", fun () -> Sell_flavour (truck1, Vanilla) |> app.HandleCommand truck1_guid |> run |> printfn "Result: %A")
-      ("Sell_flavour (truck2, Vanilla)", fun () -> Sell_flavour (truck2, Vanilla) |> app.HandleCommand truck2_guid |> run |> printfn "Result: %A")
-      ("Sell_flavour (truck1, Strawberry)", fun () -> Sell_flavour (truck1, Strawberry) |> app.HandleCommand truck1_guid |> run |> printfn "Result: %A")
-      ("Sell_flavour (truck2, Strawberry)", fun () -> Sell_flavour (truck2, Strawberry) |> app.HandleCommand truck2_guid |> run |> printfn "Result: %A")
-      ("Restock_flavour (truck1, Vanilla, 5)", fun () -> Restock_flavour (truck1, Vanilla, 5) |> app.HandleCommand truck1_guid |> run |> printfn "Result: %A")
-      ("Restock_flavour (truck2, Vanilla, 5)", fun () -> Restock_flavour (truck2, Vanilla, 5) |> app.HandleCommand truck2_guid |> run |> printfn "Result: %A")
-      ("Restock_flavour (truck1, Strawberry, 5)", fun () -> Restock_flavour (truck1, Strawberry, 5) |> app.HandleCommand truck1_guid |> run |> printfn "Result: %A")
-      ("Restock_flavour (truck2, Strawberry, 5)", fun () -> Restock_flavour (truck2, Strawberry, 5) |> app.HandleCommand truck2_guid |> run |> printfn "Result: %A")
+      ("Total History", fun () -> app.GetAllEvents() |> runAsync |> printEvents "all")
+      ("History Truck 1", fun () -> truck1_guid |> app.GetStream |> runAsync |> printEvents "Truck 1")
+      ("History Truck 2", fun () -> truck2_guid |> app.GetStream |> runAsync |> printEvents "Truck 2")
+      ("Query.FlavoursInStock (truck1, Vanilla)", fun () -> FlavourInStockOfTruck (truck1, Vanilla) |> app.HandleQuery |> runAsync |> printQueryResults "Stock Truck 1 Vanilla")
+      ("Query.FlavoursInStock (truck2, Vanilla)", fun () -> FlavourInStockOfTruck (truck2, Vanilla) |> app.HandleQuery |> runAsync |> printQueryResults "Stock Truck 2 Vanilla")
+      ("Query.FlavoursInStock (truck1, Strawberry)", fun () -> FlavourInStockOfTruck (truck1, Strawberry) |> app.HandleQuery |> runAsync |> printQueryResults "Stock Truck 1 Strawberry")
+      ("Query.FlavoursInStock (truck2, Strawberry)", fun () -> FlavourInStockOfTruck (truck2, Strawberry) |> app.HandleQuery |> runAsync |> printQueryResults "Stock Truck 2 Strawberry")
+      ("Sell_flavour (truck1, Vanilla)", fun () -> Sell_flavour (truck1, Vanilla) |> app.HandleCommand truck1_guid |> runAsync |> printCommandResults "Command")
+      ("Sell_flavour (truck2, Vanilla)", fun () -> Sell_flavour (truck2, Vanilla) |> app.HandleCommand truck2_guid |> runAsync |> printCommandResults "Command")
+      ("Sell_flavour (truck1, Strawberry)", fun () -> Sell_flavour (truck1, Strawberry) |> app.HandleCommand truck1_guid |> runAsync |> printCommandResults "Command")
+      ("Sell_flavour (truck2, Strawberry)", fun () -> Sell_flavour (truck2, Strawberry) |> app.HandleCommand truck2_guid |> runAsync |> printCommandResults "Command")
+      ("Restock_flavour (truck1, Vanilla, 5)", fun () -> Restock_flavour (truck1, Vanilla, 5) |> app.HandleCommand truck1_guid |> runAsync |> printCommandResults "Command")
+      ("Restock_flavour (truck2, Vanilla, 5)", fun () -> Restock_flavour (truck2, Vanilla, 5) |> app.HandleCommand truck2_guid |> runAsync |> printCommandResults "Command")
+      ("Restock_flavour (truck1, Strawberry, 5)", fun () -> Restock_flavour (truck1, Strawberry, 5) |> app.HandleCommand truck1_guid |> runAsync |> printCommandResults "Command")
+      ("Restock_flavour (truck2, Strawberry, 5)", fun () -> Restock_flavour (truck2, Strawberry, 5) |> app.HandleCommand truck2_guid |> runAsync |> printCommandResults "Command")
     ], ignore
 
   main

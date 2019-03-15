@@ -39,3 +39,10 @@ module Helper =
 
   let waitForAnyKey () =
     Console.ReadKey() |> ignore
+
+
+  let inline printError message details =
+    Console.ForegroundColor <- ConsoleColor.Red
+    printfn "\n%s" message
+    Console.ResetColor()
+    printfn "%A" details

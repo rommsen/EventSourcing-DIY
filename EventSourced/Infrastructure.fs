@@ -108,7 +108,8 @@ type EventSourced<'Comand,'Event,'Query,'Result>
    eventStorageInit : unit -> EventStorage<'Event>,
    commandHandlerInit : EventStore<'Event> -> CommandHandler<'Comand>,
    queryHandler : QueryHandler<'Query,'Result>,
-   eventListener : EventListener<'Event> list) =
+   eventListener : EventListener<'Event> list)
+    =
 
   let eventStorage = eventStorageInit()
 
@@ -119,7 +120,7 @@ type EventSourced<'Comand,'Event,'Query,'Result>
   let queryHandler = queryHandler
 
   do
-    eventStore.OnError.Add(printfn "eventStore Error: %A")
+    eventStore.OnError.Add(fun exn -> UI.Helper.printError (sprintf "EventStore Error: %s" exn.Message) exn)
     commandHandler.OnError.Add(printfn "commandHandler Error: %A")
 
     eventListener
@@ -256,11 +257,11 @@ module EventStore =
                 try
                   let! events = storage.Get()
 
-                  events |> reply.Reply
+                  do events |> reply.Reply
 
                 with exn ->
-                  inbox.Trigger(exn)
-                  exn.Message |> Error |> reply.Reply
+                  do inbox.Trigger(exn)
+                  do exn.Message |> Error |> reply.Reply
 
                 return! loop eventListeners
 
@@ -269,12 +270,11 @@ module EventStore =
                 try
                   let! stream = source |> storage.GetStream
 
-                  stream
-                  |> reply.Reply
+                  do stream |> reply.Reply
 
                 with exn ->
-                  inbox.Trigger(exn)
-                  exn.Message |> Error |> reply.Reply
+                  do inbox.Trigger(exn)
+                  do exn.Message |> Error |> reply.Reply
 
                 return! loop eventListeners
 
@@ -282,10 +282,11 @@ module EventStore =
                 try
                   do! events |> storage.Append
                   do eventListeners |> notifyEventListeners events
+                  do reply.Reply (Ok ())
 
                 with exn ->
-                  inbox.Trigger(exn)
-                  exn.Message |> Error |> reply.Reply
+                  do inbox.Trigger(exn)
+                  do exn.Message |> Error |> reply.Reply
 
                 return! loop eventListeners
 
@@ -303,7 +304,7 @@ module EventStore =
                           do reply.Reply (Error err)
 
                 with exn ->
-                  inbox.Trigger(exn)
+                  do inbox.Trigger(exn)
 
                 return! loop (listener :: eventListeners)
           }
@@ -348,13 +349,15 @@ module CommandHandler =
                 let newEvents =
                   stream |> Result.map (asEvents >> behaviour command >> enveloped eventSource)
 
+
                 let! result =
                   newEvents
                   |> function
                       | Ok events -> eventStore.Append events
                       | Error err -> async { return Error err }
 
-                reply.Reply result
+
+                do reply.Reply result
 
                 return! loop ()
           }
@@ -417,11 +420,26 @@ module QueryHandler =
       * Alles gibt ein Ergebnis zurück. Zum Beispiel auch Append
       * Gedanken was muss Async sein, was blockend, was Agent
       * Exceptions vs Results
+      * Error Messaging
+          -> wir bleiben bei dem Agent, da so dass system nicht stehen bleibt, bei einer Exception
+          -> wir bleiben erstmal bei einfacher Fehlerausgabe
       * Subscribe: FromNow (z.B. Live Stream aller incoming events, elmish app), FromX (persistent readmodel), FromBeginning (memory readmodel)
       * Persistent Readmodel
       * nochmal Gedanken zu messaging (commandHandler ohne result oder mit?)
       * tests
 
+      Motivation für Persistent Readmodels:
+      * Server Start
+      * Memory Consumption
+      * Another Service that should consume the Readmodel (should not be depending on server running)
+
+
+
+    Danach: Domain nicht sehr komplex: Lets use the SafeConf Planner
+
+
+
+   ACHTUNG: Programm stürzt ab bei Commands
 
   *)
 
