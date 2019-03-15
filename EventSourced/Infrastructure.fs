@@ -58,7 +58,7 @@ type ReadModel<'Event, 'State> =
 
 type CommandHandler<'Command> =
   {
-    Handle : EventSource -> 'Command -> unit
+    Handle : EventSource -> 'Command -> Async<Result<unit,string>>
     OnError : IEvent<exn>
   }
 
@@ -331,7 +331,8 @@ module CommandHandler =
     |> List.map (fun event -> { Source = source ; Event = event })
 
   type Msg<'Command> =
-    | Handle of 'Command
+    | Handle of EventSource * 'Command * AsyncReplyChannel<Result<unit,string>>
+
 
   let initialize (behaviour : Behaviour<_,_>) (eventStore : EventStore<_>) : CommandHandler<_> =
     let agent =
@@ -341,12 +342,19 @@ module CommandHandler =
             let! msg = inbox.Receive()
 
             match msg with
-            | Handle (eventSource,command) ->
+            | Handle (eventSource,command,reply) ->
                 let! stream = eventSource |> eventStore.GetStream
 
-                stream
-                |> Result.map (asEvents >> behaviour command >> enveloped eventSource >> eventStore.Append)
-                |> ignore
+                let newEvents =
+                  stream |> Result.map (asEvents >> behaviour command >> enveloped eventSource)
+
+                let! result =
+                  newEvents
+                  |> function
+                      | Ok events -> eventStore.Append events
+                      | Error err -> async { return Error err }
+
+                reply.Reply result
 
                 return! loop ()
           }
@@ -355,7 +363,7 @@ module CommandHandler =
       )
 
     {
-      Handle = fun source command -> (source,command) |> Handle |> agent.Post
+      Handle = fun source command -> agent.PostAndAsyncReply (fun reply -> Handle (source,command,reply))
       OnError = agent.OnError
     }
 
