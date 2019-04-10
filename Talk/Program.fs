@@ -19,8 +19,8 @@ let step2 =
     ("SellFlavour Strawberry", Step2.Program.sellFlavour Step2.Domain.Strawberry)
     ("Restock Vanilla with 5 portions", Step2.Program.restock Step2.Domain.Vanilla 5)
     ("Restock Strawberry with 5 portions", Step2.Program.restock Step2.Domain.Strawberry 5)
-    ("Stock of Vanilla", Step2.Program.stockOf Step2.Domain.Vanilla >> printfn "\nStock of Vanilla: %i\n" >> waitForAnyKey)
-    ("Stock of Strawberry", Step2.Program.stockOf Step2.Domain.Strawberry >> printfn "\nStock of Strawberry: %i\n" >> waitForAnyKey)
+    ("Stock of Vanilla", fun agent -> agent |> Step2.Program.stockOf Step2.Domain.Vanilla |> printfn "\nStock of Vanilla: %i\n" |> waitForAnyKey)
+    ("Stock of Strawberry", fun agent -> agent |> Step2.Program.stockOf Step2.Domain.Strawberry |> printfn "\nStock of Strawberry: %i\n" |> waitForAnyKey)
   ],  Step2.Program.getEvents >> printEvents
 
 let step3 =
@@ -30,10 +30,10 @@ let step3 =
     ("SellFlavour Strawberry", Step3.Program.sellFlavour Step3.Domain.Strawberry)
     ("Restock Vanilla with 5 portions", Step3.Program.restock Step3.Domain.Vanilla 5)
     ("Restock Strawberry with 5 portions", Step3.Program.restock Step3.Domain.Strawberry 5)
-    ("Stock of Vanilla", Step3.Program.stockOf Step3.Domain.Vanilla >> printfn "\nStock of Vanilla: %i\n" >> waitForAnyKey)
-    ("Stock of Strawberry", Step3.Program.stockOf Step3.Domain.Strawberry >> printfn "\nStock of Strawberry: %i\n" >> waitForAnyKey)
-    ("Run Tests (before)", fun _ -> runTests defaultConfig Step2.Tests.tests |> ignore ; waitForAnyKey())
-    ("Run Tests (after)", fun _ -> runTests defaultConfig Step3.Tests.tests |> ignore ; waitForAnyKey())
+    ("Stock of Vanilla", fun agent -> agent |> Step3.Program.stockOf Step3.Domain.Vanilla |> printfn "\nStock of Vanilla: %i\n" |> waitForAnyKey)
+    ("Stock of Strawberry", fun agent -> agent |> Step3.Program.stockOf Step3.Domain.Strawberry |> printfn "\nStock of Strawberry: %i\n" |> waitForAnyKey)
+    ("Run Tests (before)", fun _ -> runTests defaultConfig Step2.Tests.tests |> ignore |> waitForAnyKey)
+    ("Run Tests (after)", fun _ -> runTests defaultConfig Step3.Tests.tests |> ignore |> waitForAnyKey)
   ],  Step3.Program.getEvents >> printEvents
 
 let step4b truck =
@@ -42,18 +42,18 @@ let step4b truck =
     ("SellFlavour Strawberry", Step4.Program.sellFlavour truck Step4.Domain.Strawberry)
     ("Restock Vanilla with 5 portions", Step4.Program.restock truck Step4.Domain.Vanilla 5)
     ("Restock Strawberry with 5 portions", Step4.Program.restock truck Step4.Domain.Strawberry 5)
-    ("Stock of Vanilla", Step4.Program.stockOf truck Step4.Domain.Vanilla >> printfn "\nStock of Vanilla: %i\n" >> waitForAnyKey)
-    ("Stock of Strawberry", Step4.Program.stockOf truck Step4.Domain.Strawberry >> printfn "\nStock of Strawberry: %i\n" >> waitForAnyKey)
+    ("Stock of Vanilla", fun agent -> agent |> Step4.Program.stockOf truck Step4.Domain.Vanilla |> printfn "\nStock of Vanilla: %i\n" |> waitForAnyKey)
+    ("Stock of Strawberry", fun agent -> agent |> Step4.Program.stockOf truck Step4.Domain.Strawberry |> printfn "\nStock of Strawberry: %i\n" |> waitForAnyKey)
   ],  Step4.Program.getEventStream truck >> printEvents
 
 
 let step4 =
   [
      ("Demo Data", Step4.Program.demoData)
-     ("Truck1", fun mailbox -> Menu.initialize mailbox "Step4 - Truck1" (step4b Step4.Program.truck1))
-     ("Truck2", fun mailbox -> Menu.initialize mailbox "Step4 - Truck2" (step4b Step4.Program.truck2))
-     ("Events per Aggregate", Step4.Program.getEvents >> printEventsPerAggregate >> waitForAnyKey)
-     ("Run Tests", fun _ -> runTests defaultConfig Step4.Tests.tests |> ignore ; waitForAnyKey())
+     ("Truck1", fun agent -> Menu.initialize agent "Step4 - Truck1" (step4b Step4.Program.truck1))
+     ("Truck2", fun agent -> Menu.initialize agent "Step4 - Truck2" (step4b Step4.Program.truck2))
+     ("Events per Aggregate", fun agent -> agent |> Step4.Program.getEvents |> printEventsPerAggregate |> waitForAnyKey)
+     ("Run Tests", fun _ -> runTests defaultConfig Step4.Tests.tests |> ignore |> waitForAnyKey)
   ],  Step4.Program.getEvents >> printTotalHistory
 
 [<EntryPoint>]
