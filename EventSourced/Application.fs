@@ -56,10 +56,8 @@ module InMemoryReadmodels =
 
   let flavoursSold () : ReadModel<_,_> =
     let agent =
-      let initState : Map<EventSource, Map<Flavour, int>> = Map.empty
-
       let eventSubscriber (inbox : Agent<Msg<_,_>>) =
-        let rec loop state =
+        let rec loop (state : Map<EventSource, Map<Flavour, int>>) =
           async {
             let! msg = inbox.Receive()
 
@@ -79,7 +77,7 @@ module InMemoryReadmodels =
                 return! loop state
           }
 
-        loop initState
+        loop Map.empty
 
       Agent<Msg<_,_>>.Start(eventSubscriber)
 
@@ -138,10 +136,8 @@ module PersistentReadmodels =
 
   let flavoursSold () : ReadModel<_,_> =
     let agent =
-      let initState : Map<EventSource, Map<Flavour, int>> = Map.empty
-
       let eventSubscriber (inbox : Agent<Msg<_,_>>) =
-        let rec loop state =
+        let rec loop (state : Map<EventSource, Map<Flavour, int>>) =
           async {
             let! msg = inbox.Receive()
 
@@ -161,7 +157,7 @@ module PersistentReadmodels =
                 return! loop state
           }
 
-        loop initState
+        loop Map.empty
 
       Agent<Msg<_,_>>.Start(eventSubscriber)
 

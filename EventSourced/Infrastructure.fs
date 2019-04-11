@@ -425,6 +425,17 @@ module QueryHandler =
           -> wir bleiben erstmal bei einfacher Fehlerausgabe
       * Subscribe: FromNow (z.B. Live Stream aller incoming events, elmish app), FromX (persistent readmodel), FromBeginning (memory readmodel)
       * Persistent Readmodel (sold flavours über alle trucks)
+          speichere current state in db
+          beim Start: hole currentState aus DB
+          alles andere bleibt wie es ist
+
+          Alternative:
+          hole State bei jeder Query aus DB
+
+          Alternative:
+          nur schreiben, lesen geschieht im Query Handler
+
+
       * nochmal Gedanken zu messaging (commandHandler ohne result oder mit?)
       * tests
 
