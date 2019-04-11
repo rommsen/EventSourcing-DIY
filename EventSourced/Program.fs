@@ -81,15 +81,17 @@ let main _ =
   let truck1 = Truck <| System.Guid.Parse "49d9d107-aceb-4b2d-a7e3-eca784a9de6e"
   let truck2 = Truck <| System.Guid.Parse "8b916bde-6bdf-43cc-b43b-69c9f4c3e5c4"
 
-  let flavoursReadmodel = InMemoryReadmodels.flavoursInStock()
+  let flavoursInStockReadmodel = InMemoryReadmodels.flavoursInStock()
+  let flavoursSoldReadmodel = InMemoryReadmodels.flavoursSold()
   let queryHandlers =
     [
-      QueryHandlers.flavours flavoursReadmodel.State
+      QueryHandlers.flavours flavoursInStockReadmodel.State flavoursSoldReadmodel.State
     ]
 
   let eventListener =
     [
-      flavoursReadmodel.EventListener
+      flavoursInStockReadmodel.EventListener
+      flavoursSoldReadmodel.EventListener
     ]
 
   let app =
@@ -109,10 +111,18 @@ let main _ =
       ("Total History", fun () -> app.GetAllEvents() |> runAsync |> printEvents "all")
       ("History Truck 1", fun () -> truck1_guid |> app.GetStream |> runAsync |> printEvents "Truck 1")
       ("History Truck 2", fun () -> truck2_guid |> app.GetStream |> runAsync |> printEvents "Truck 2")
-      ("Query.FlavoursInStock (truck1, Vanilla)", fun () -> FlavourInStockOfTruck (truck1, Vanilla) |> app.HandleQuery |> runAsync |> printQueryResults "Stock Truck 1 Vanilla")
-      ("Query.FlavoursInStock (truck2, Vanilla)", fun () -> FlavourInStockOfTruck (truck2, Vanilla) |> app.HandleQuery |> runAsync |> printQueryResults "Stock Truck 2 Vanilla")
-      ("Query.FlavoursInStock (truck1, Strawberry)", fun () -> FlavourInStockOfTruck (truck1, Strawberry) |> app.HandleQuery |> runAsync |> printQueryResults "Stock Truck 1 Strawberry")
-      ("Query.FlavoursInStock (truck2, Strawberry)", fun () -> FlavourInStockOfTruck (truck2, Strawberry) |> app.HandleQuery |> runAsync |> printQueryResults "Stock Truck 2 Strawberry")
+      ("Query.FlavourInStockOfTruck (truck1, Vanilla)", fun () -> FlavourInStockOfTruck (truck1, Vanilla) |> app.HandleQuery |> runAsync |> printQueryResults "Stock Truck 1 Vanilla")
+      ("Query.FlavourInStockOfTruck (truck2, Vanilla)", fun () -> FlavourInStockOfTruck (truck2, Vanilla) |> app.HandleQuery |> runAsync |> printQueryResults "Stock Truck 2 Vanilla")
+      ("Query.FlavourInStockOfTruck (truck1, Strawberry)", fun () -> FlavourInStockOfTruck (truck1, Strawberry) |> app.HandleQuery |> runAsync |> printQueryResults "Stock Truck 1 Strawberry")
+      ("Query.FlavourInStockOfTruck (truck2, Strawberry)", fun () -> FlavourInStockOfTruck (truck2, Strawberry) |> app.HandleQuery |> runAsync |> printQueryResults "Stock Truck 2 Strawberry")
+      ("Query.FlavourInStockOfAll Strawberry", fun () -> FlavourInStockOfAll Strawberry |> app.HandleQuery |> runAsync |> printQueryResults "Total Stock Strawberry")
+      ("Query.FlavourInStockOfAll Vanilla", fun () -> FlavourInStockOfAll Vanilla |> app.HandleQuery |> runAsync |> printQueryResults "Total Stock Vanilla")
+      ("Query.FlavoursSoldOfTruck (truck1, Vanilla)", fun () -> FlavoursSoldOfTruck (truck1, Vanilla) |> app.HandleQuery |> runAsync |> printQueryResults "Sold Truck 1 Vanilla")
+      ("Query.FlavoursSoldOfTruck (truck2, Vanilla)", fun () -> FlavoursSoldOfTruck (truck2, Vanilla) |> app.HandleQuery |> runAsync |> printQueryResults "Sold Truck 2 Vanilla")
+      ("Query.FlavoursSoldOfTruck (truck1, Strawberry)", fun () -> FlavoursSoldOfTruck (truck1, Strawberry) |> app.HandleQuery |> runAsync |> printQueryResults "Sold Truck 1 Strawberry")
+      ("Query.FlavoursSoldOfTruck (truck2, Strawberry)", fun () -> FlavoursSoldOfTruck (truck2, Strawberry) |> app.HandleQuery |> runAsync |> printQueryResults "Sold Truck 2 Strawberry")
+      ("Query.FlavoursSoldOfAll Strawberry", fun () -> FlavoursSoldOfAll Strawberry |> app.HandleQuery |> runAsync |> printQueryResults "Total Sold Strawberry")
+      ("Query.FlavoursSoldOfAll Vanilla", fun () -> FlavoursSoldOfAll Vanilla |> app.HandleQuery |> runAsync |> printQueryResults "Total Sold Vanilla")
       ("Sell_flavour (truck1, Vanilla)", fun () -> Sell_flavour (truck1, Vanilla) |> app.HandleCommand truck1_guid |> runAsync |> printCommandResults "Command")
       ("Sell_flavour (truck2, Vanilla)", fun () -> Sell_flavour (truck2, Vanilla) |> app.HandleCommand truck2_guid |> runAsync |> printCommandResults "Command")
       ("Sell_flavour (truck1, Strawberry)", fun () -> Sell_flavour (truck1, Strawberry) |> app.HandleCommand truck1_guid |> runAsync |> printCommandResults "Command")

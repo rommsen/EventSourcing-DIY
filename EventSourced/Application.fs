@@ -8,6 +8,8 @@ module API =
     | Trucks
     | FlavourInStockOfTruck of Truck * Flavour
     | FlavourInStockOfAll of Flavour
+    | FlavoursSoldOfTruck of Truck * Flavour
+    | FlavoursSoldOfAll of Flavour
 
 module InMemoryReadmodels =
   open Infrastructure
@@ -33,6 +35,41 @@ module InMemoryReadmodels =
                   |> Map.tryFind eventEnvelope.Source
                   |> Option.defaultValue Projections.flavoursInStock.Init
                   |> fun projectionState -> eventEnvelope.Event |> Projections.flavoursInStock.Update projectionState
+                  |> fun newState -> state |> Map.add eventEnvelope.Source newState
+
+                return! loop newState
+
+            | State reply ->
+                reply.Reply state
+                return! loop state
+          }
+
+        loop initState
+
+      Agent<Msg<_,_>>.Start(eventSubscriber)
+
+    {
+      EventListener = Notify >> agent.Post
+      State = fun () -> agent.PostAndAsyncReply State
+    }
+
+
+  let flavoursSold () : ReadModel<_,_> =
+    let agent =
+      let initState : Map<EventSource, Map<Flavour, int>> = Map.empty
+
+      let eventSubscriber (inbox : Agent<Msg<_,_>>) =
+        let rec loop state =
+          async {
+            let! msg = inbox.Receive()
+
+            match msg with
+            | Notify eventEnvelope ->
+                let newState =
+                  state
+                  |> Map.tryFind eventEnvelope.Source
+                  |> Option.defaultValue Projections.soldFlavours.Init
+                  |> fun projectionState -> eventEnvelope.Event |> Projections.soldFlavours.Update projectionState
                   |> fun newState -> state |> Map.add eventEnvelope.Source newState
 
                 return! loop newState
@@ -91,17 +128,61 @@ module InMemoryReadmodels =
   //   }
 
 
+module PersistentReadmodels =
+  open Infrastructure
+  open Domain
+
+  type Msg<'Event,'Result> =
+    | Notify of EventEnvelope<'Event>
+    | State of AsyncReplyChannel<'Result>
+
+  let flavoursSold () : ReadModel<_,_> =
+    let agent =
+      let initState : Map<EventSource, Map<Flavour, int>> = Map.empty
+
+      let eventSubscriber (inbox : Agent<Msg<_,_>>) =
+        let rec loop state =
+          async {
+            let! msg = inbox.Receive()
+
+            match msg with
+            | Notify eventEnvelope ->
+                let newState =
+                  state
+                  |> Map.tryFind eventEnvelope.Source
+                  |> Option.defaultValue Projections.flavoursInStock.Init
+                  |> fun projectionState -> eventEnvelope.Event |> Projections.flavoursInStock.Update projectionState
+                  |> fun newState -> state |> Map.add eventEnvelope.Source newState
+
+                return! loop newState
+
+            | State reply ->
+                reply.Reply state
+                return! loop state
+          }
+
+        loop initState
+
+      Agent<Msg<_,_>>.Start(eventSubscriber)
+
+    {
+      EventListener = Notify >> agent.Post
+      State = fun () -> agent.PostAndAsyncReply State
+    }
+
+
+
 module QueryHandlers =
   open API
   open Domain
   open Infrastructure
 
-  let flavours flavourState =
+  let flavours flavoursInStock flavoursSold =
     let handleQuery query =
       match query with
       | FlavourInStockOfTruck(Truck truck, flavour) ->
           async {
-            let! state = flavourState()
+            let! state = flavoursInStock()
 
             return
               state
@@ -115,7 +196,36 @@ module QueryHandlers =
 
       | FlavourInStockOfAll flavour ->
           async {
-            let! state = flavourState()
+            let! state = flavoursInStock()
+
+            return
+              state
+              |> Map.fold (fun total _ stockOfTruck ->
+                  stockOfTruck
+                  |> Map.tryFind flavour
+                  |> Option.defaultValue 0
+                  |> (+) total) 0
+              |> box
+              |> Handled
+          }
+
+      | FlavoursSoldOfTruck (Truck truck, flavour) ->
+          async {
+            let! state = flavoursSold()
+
+            return
+              state
+              |> Map.tryFind truck
+              |> Option.defaultValue Map.empty
+              |> Map.tryFind flavour
+              |> Option.defaultValue 0
+              |> box
+              |> Handled
+          }
+
+      | FlavoursSoldOfAll flavour ->
+          async {
+            let! state = flavoursSold()
 
             return
               state

@@ -424,7 +424,7 @@ module QueryHandler =
           -> wir bleiben bei dem Agent, da so dass system nicht stehen bleibt, bei einer Exception
           -> wir bleiben erstmal bei einfacher Fehlerausgabe
       * Subscribe: FromNow (z.B. Live Stream aller incoming events, elmish app), FromX (persistent readmodel), FromBeginning (memory readmodel)
-      * Persistent Readmodel
+      * Persistent Readmodel (sold flavours über alle trucks)
       * nochmal Gedanken zu messaging (commandHandler ohne result oder mit?)
       * tests
 
