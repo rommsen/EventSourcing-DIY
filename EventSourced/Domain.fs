@@ -11,22 +11,22 @@ type Flavour =
   with
     static member fromString flavour =
       match flavour with
-          | "Strawberry" ->
-              Some Strawberry
+      | "Strawberry" ->
+          Some Strawberry
 
-          | "Vanilla" ->
-              Some Vanilla
+      | "Vanilla" ->
+          Some Vanilla
 
-          | _ ->
-              None
+      | _ ->
+          None
 
     static member toString flavour =
       match flavour with
-          | Strawberry ->
-              "Strawberry"
+      | Strawberry ->
+          "Strawberry"
 
-          | Vanilla ->
-              "Vanilla"
+      | Vanilla ->
+          "Vanilla"
 
 type Event =
 | Truck_added_to_fleet of Truck

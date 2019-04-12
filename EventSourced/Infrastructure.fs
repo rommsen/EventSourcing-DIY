@@ -13,7 +13,7 @@ type EventEnvelope<'Event> =
   }
 
 type EventListener<'Event> =
-  EventEnvelope<'Event> -> unit
+  EventEnvelope<'Event> list -> unit
 
 type EventResult<'Event> =
   Result<EventEnvelope<'Event> list, string>
@@ -245,9 +245,11 @@ module EventStore =
     | Append of EventEnvelope<'Event> list * AsyncReplyChannel<Result<unit,string>>
     | Subscribe of EventListener<'Event> * AsyncReplyChannel<Result<unit,string>>
 
-  let notifyEventListeners events subscriptions =
-    subscriptions
-    |> List.iter (fun subscription -> events |> List.iter subscription)
+  let notifyEventListeners events (subscriptions : EventListener<_> list) =
+      subscriptions
+      |> List.iter (fun subscription -> events |> subscription)
+
+
 
   let initialize (storage : EventStorage<_>) : EventStore<_> =
 
@@ -300,7 +302,7 @@ module EventStore =
                   events
                   |> function
                       | Ok result ->
-                          do result |> List.iter listener
+                          do result |> listener
                           do reply.Reply (Ok ())
 
                       | Error err ->
@@ -436,7 +438,7 @@ module QueryHandler =
           hole State bei jeder Query aus DB
 
           Alternative:
-          nur schreiben, lesen geschieht im Query Handler
+          nur schreiben, lesen geschieht im Query Handler <- habe dies gemacht
 
 
       * nochmal Gedanken zu messaging (commandHandler ohne result oder mit?)

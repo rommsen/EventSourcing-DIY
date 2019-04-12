@@ -16,8 +16,16 @@ module InMemoryReadmodels =
   open Domain
 
   type Msg<'Event,'Result> =
-    | Notify of EventEnvelope<'Event>
+    | Notify of EventEnvelope<'Event> list
     | State of AsyncReplyChannel<'Result>
+
+  let projectIntoMap projection =
+    fun state eventEnvelope ->
+      state
+      |> Map.tryFind eventEnvelope.Source
+      |> Option.defaultValue projection.Init
+      |> fun projectionState -> eventEnvelope.Event |> projection.Update projectionState
+      |> fun newState -> state |> Map.add eventEnvelope.Source newState
 
   let flavoursInStock () : ReadModel<_,_> =
     let agent =
@@ -29,13 +37,10 @@ module InMemoryReadmodels =
             let! msg = inbox.Receive()
 
             match msg with
-            | Notify eventEnvelope ->
+            | Notify eventEnvelopes ->
                 let newState =
-                  state
-                  |> Map.tryFind eventEnvelope.Source
-                  |> Option.defaultValue Projections.flavoursInStock.Init
-                  |> fun projectionState -> eventEnvelope.Event |> Projections.flavoursInStock.Update projectionState
-                  |> fun newState -> state |> Map.add eventEnvelope.Source newState
+                  eventEnvelopes
+                  |> List.fold (projectIntoMap Projections.flavoursInStock) state
 
                 return! loop newState
 
@@ -61,13 +66,10 @@ module InMemoryReadmodels =
             let! msg = inbox.Receive()
 
             match msg with
-            | Notify eventEnvelope ->
+            | Notify eventEnvelopes ->
                 let newState =
-                  state
-                  |> Map.tryFind eventEnvelope.Source
-                  |> Option.defaultValue Projections.flavoursInStock.Init
-                  |> fun projectionState -> eventEnvelope.Event |> Projections.flavoursInStock.Update projectionState
-                  |> fun newState -> state |> Map.add eventEnvelope.Source newState
+                  eventEnvelopes
+                  |> List.fold (projectIntoMap Projections.soldFlavours) state
 
                 return! loop newState
 
@@ -91,25 +93,31 @@ module PersistentReadmodels =
   open Domain
   open Npgsql.FSharp
 
+  let parameters eventEnvelope =
+    match eventEnvelope.Event with
+    | Flavour_sold (Truck truck,flavour) ->
+        [
+          "@truck", SqlValue.Uuid truck
+          "@flavour", SqlValue.String (Flavour.toString flavour)
+        ] |> Some
+
+    | _ -> None
+
   let flavourSoldListener (DB_Connection_String db_connection) : EventListener<Event> =
-    fun eventEnvelope ->
-      match eventEnvelope.Event with
-      | Flavour_sold (Truck truck,flavour) ->
-          let query = """
-              INSERT INTO flavours_sold (truck, flavour, sold) VALUES (@truck, @flavour, 1)
-  	          ON CONFLICT (truck,flavour) DO UPDATE SET sold = flavours_sold.sold + 1"""
+    let query = """
+      INSERT INTO flavours_sold (truck, flavour, sold) VALUES (@truck, @flavour, 1)
+      ON CONFLICT (truck,flavour) DO UPDATE SET sold = flavours_sold.sold + 1"""
 
-          let parameter = [
-            [ "@truck", SqlValue.Uuid truck
-              "@flavour", SqlValue.String (Flavour.toString flavour) ] ]
+    fun eventEnvelopes ->
+      let parameters =
+        eventEnvelopes |> List.choose parameters
 
+      if not <| List.isEmpty parameters then
+        do
           db_connection
           |> Sql.connect
-          |> Sql.executeTransaction [ query, parameter ]
+          |> Sql.executeTransaction [ query, parameters ]
           |> ignore
-
-      | _ -> ()
-
 
 
 module QueryHandlers =
@@ -156,7 +164,7 @@ module QueryHandlers =
               db_connection
               |> Sql.connect
               |> Sql.query "SELECT sold FROM flavours_sold WHERE truck = @truck AND flavour = @flavour"
-              |> Sql.parameters [ "@truck", SqlValue.Uuid truck ; "@flavour" , SqlValue.String (Flavour.toString flavour) ]
+              |> Sql.parameters [ "@truck", SqlValue.Uuid truck ; "@flavour", SqlValue.String (Flavour.toString flavour) ]
               |> Sql.executeScalarSafe
               |> function | Ok (SqlValue.Int sold) -> sold | _ ->  0
               |> box
@@ -169,7 +177,7 @@ module QueryHandlers =
               db_connection
               |> Sql.connect
               |> Sql.query "SELECT SUM(sold) :: int FROM flavours_sold WHERE flavour = @flavour"
-              |> Sql.parameters [ "@flavour" , SqlValue.String (Flavour.toString flavour) ]
+              |> Sql.parameters [ "@flavour", SqlValue.String (Flavour.toString flavour) ]
               |> Sql.executeScalarSafe
               |> function | Ok (SqlValue.Int sold) -> sold | _ -> 0
               |> box
