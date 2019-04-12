@@ -64,12 +64,20 @@ module Helper =
   let runTests () =
     runTests defaultConfig Domain.domainTests |> ignore
 
-
-
 open Application
 open Domain
 open API
 open Helper
+open Npgsql.FSharp
+
+let db_connection =
+  Sql.host "localhost"
+  |> Sql.port 5432
+  |> Sql.username "postgres"
+  |> Sql.password "123456"
+  |> Sql.database "EventSourced"
+  |> Sql.str
+  |> DB_Connection_String
 
 [<EntryPoint>]
 let main _ =
@@ -85,13 +93,13 @@ let main _ =
   let flavoursSoldReadmodel = InMemoryReadmodels.flavoursSold()
   let queryHandlers =
     [
-      QueryHandlers.flavours flavoursInStockReadmodel.State flavoursSoldReadmodel.State
+      QueryHandlers.flavours flavoursInStockReadmodel.State db_connection
     ]
 
   let eventListener =
     [
       flavoursInStockReadmodel.EventListener
-      flavoursSoldReadmodel.EventListener
+      PersistentReadmodels.flavourSoldListener db_connection
     ]
 
   let app =

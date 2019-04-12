@@ -66,6 +66,9 @@ type Behaviour<'Command,'Event> =
   'Command -> EventProducer<'Event>
 
 
+type DB_Connection_String = DB_Connection_String of string
+
+
 /// A wrapper for MailboxProcessor that catches all unhandled exceptions
 /// and reports them via the 'OnError' event. Otherwise, the API
 /// is the same as the API of 'MailboxProcessor'

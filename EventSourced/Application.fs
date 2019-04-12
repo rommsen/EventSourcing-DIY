@@ -53,87 +53,6 @@ module InMemoryReadmodels =
       State = fun () -> agent.PostAndAsyncReply State
     }
 
-
-  let flavoursSold () : ReadModel<_,_> =
-    let agent =
-      let eventSubscriber (inbox : Agent<Msg<_,_>>) =
-        let rec loop (state : Map<EventSource, Map<Flavour, int>>) =
-          async {
-            let! msg = inbox.Receive()
-
-            match msg with
-            | Notify eventEnvelope ->
-                let newState =
-                  state
-                  |> Map.tryFind eventEnvelope.Source
-                  |> Option.defaultValue Projections.soldFlavours.Init
-                  |> fun projectionState -> eventEnvelope.Event |> Projections.soldFlavours.Update projectionState
-                  |> fun newState -> state |> Map.add eventEnvelope.Source newState
-
-                return! loop newState
-
-            | State reply ->
-                reply.Reply state
-                return! loop state
-          }
-
-        loop Map.empty
-
-      Agent<Msg<_,_>>.Start(eventSubscriber)
-
-    {
-      EventListener = Notify >> agent.Post
-      State = fun () -> agent.PostAndAsyncReply State
-    }
-
-
-  // let trucks () =
-  //   let agent =
-  //     let initState = []
-
-  //     Agent<Msg<_,_,_>>.Start(fun inbox ->
-  //       let rec loop state =
-  //         async {
-  //           let! msg = inbox.Receive()
-
-  //           match msg with
-  //           | Notify event ->
-  //               return! loop state
-
-  //           | Query (query, reply) ->
-  //               let result =
-  //                 match query with
-  //                 | Trucks ->
-  //                     [ System.Guid.NewGuid() |> Truck ]
-  //                     |> box
-  //                     |> Handled
-
-  //                  | _ ->
-  //                     NotHandled
-
-  //               result |> reply.Reply
-
-  //               return! loop state
-  //         }
-
-  //       loop initState
-  //     )
-
-  //   {
-  //     EventListener = Notify >> agent.Post
-  //     QueryHandler = { Handle = fun query -> agent.PostAndAsyncReply(fun reply -> Query (query,reply)) }
-  //     OnError = agent.OnError
-  //   }
-
-
-module PersistentReadmodels =
-  open Infrastructure
-  open Domain
-
-  type Msg<'Event,'Result> =
-    | Notify of EventEnvelope<'Event>
-    | State of AsyncReplyChannel<'Result>
-
   let flavoursSold () : ReadModel<_,_> =
     let agent =
       let eventSubscriber (inbox : Agent<Msg<_,_>>) =
@@ -167,13 +86,39 @@ module PersistentReadmodels =
     }
 
 
+module PersistentReadmodels =
+  open Infrastructure
+  open Domain
+  open Npgsql.FSharp
+
+  let flavourSoldListener (DB_Connection_String db_connection) : EventListener<Event> =
+    fun eventEnvelope ->
+      match eventEnvelope.Event with
+      | Flavour_sold (Truck truck,flavour) ->
+          let query = """
+              INSERT INTO flavours_sold (truck, flavour, sold) VALUES (@truck, @flavour, 1)
+  	          ON CONFLICT (truck,flavour) DO UPDATE SET sold = flavours_sold.sold + 1"""
+
+          let parameter = [
+            [ "@truck", SqlValue.Uuid truck
+              "@flavour", SqlValue.String (Flavour.toString flavour) ] ]
+
+          db_connection
+          |> Sql.connect
+          |> Sql.executeTransaction [ query, parameter ]
+          |> ignore
+
+      | _ -> ()
+
+
 
 module QueryHandlers =
   open API
   open Domain
   open Infrastructure
+  open Npgsql.FSharp
 
-  let flavours flavoursInStock flavoursSold =
+  let flavours flavoursInStock (DB_Connection_String db_connection) =
     let handleQuery query =
       match query with
       | FlavourInStockOfTruck(Truck truck, flavour) ->
@@ -207,29 +152,26 @@ module QueryHandlers =
 
       | FlavoursSoldOfTruck (Truck truck, flavour) ->
           async {
-            let! state = flavoursSold()
-
             return
-              state
-              |> Map.tryFind truck
-              |> Option.defaultValue Map.empty
-              |> Map.tryFind flavour
-              |> Option.defaultValue 0
+              db_connection
+              |> Sql.connect
+              |> Sql.query "SELECT sold FROM flavours_sold WHERE truck = @truck AND flavour = @flavour"
+              |> Sql.parameters [ "@truck", SqlValue.Uuid truck ; "@flavour" , SqlValue.String (Flavour.toString flavour) ]
+              |> Sql.executeScalarSafe
+              |> function | Ok (SqlValue.Int sold) -> sold | _ ->  0
               |> box
               |> Handled
           }
 
       | FlavoursSoldOfAll flavour ->
           async {
-            let! state = flavoursSold()
-
             return
-              state
-              |> Map.fold (fun total _ stockOfTruck ->
-                  stockOfTruck
-                  |> Map.tryFind flavour
-                  |> Option.defaultValue 0
-                  |> (+) total) 0
+              db_connection
+              |> Sql.connect
+              |> Sql.query "SELECT SUM(sold) :: int FROM flavours_sold WHERE flavour = @flavour"
+              |> Sql.parameters [ "@flavour" , SqlValue.String (Flavour.toString flavour) ]
+              |> Sql.executeScalarSafe
+              |> function | Ok (SqlValue.Int sold) -> sold | _ -> 0
               |> box
               |> Handled
           }
