@@ -3,4 +3,5 @@ bin
 packages
 .vs
 .idea
+.paket/load
 Videos/store.txt
