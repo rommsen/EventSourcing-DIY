@@ -16,7 +16,7 @@ module InMemoryReadmodels =
   open Domain
 
   type Msg<'Event,'Result> =
-    | Notify of EventEnvelope<'Event> list
+    | Notify of EventEnvelope<'Event> list * AsyncReplyChannel<unit>
     | State of AsyncReplyChannel<'Result>
 
   let projectIntoMap projection =
@@ -37,10 +37,12 @@ module InMemoryReadmodels =
             let! msg = inbox.Receive()
 
             match msg with
-            | Notify eventEnvelopes ->
+            | Notify (eventEnvelopes, reply) ->
                 let newState =
                   eventEnvelopes
                   |> List.fold (projectIntoMap Projections.flavoursInStock) state
+
+                reply.Reply ()
 
                 return! loop newState
 
@@ -54,7 +56,7 @@ module InMemoryReadmodels =
       Agent<Msg<_,_>>.Start(eventSubscriber)
 
     {
-      EventListener = Notify >> agent.Post
+      EventListener = fun eventEnvelopes -> agent.PostAndAsyncReply(fun reply -> Notify (eventEnvelopes,reply))
       State = fun () -> agent.PostAndAsyncReply State
     }
 
@@ -66,10 +68,12 @@ module InMemoryReadmodels =
             let! msg = inbox.Receive()
 
             match msg with
-            | Notify eventEnvelopes ->
+            | Notify (eventEnvelopes, reply) ->
                 let newState =
                   eventEnvelopes
                   |> List.fold (projectIntoMap Projections.soldFlavours) state
+
+                reply.Reply ()
 
                 return! loop newState
 
@@ -83,7 +87,7 @@ module InMemoryReadmodels =
       Agent<Msg<_,_>>.Start(eventSubscriber)
 
     {
-      EventListener = Notify >> agent.Post
+      EventListener = fun eventEnvelopes -> agent.PostAndAsyncReply(fun reply -> Notify (eventEnvelopes,reply))
       State = fun () -> agent.PostAndAsyncReply State
     }
 
@@ -113,11 +117,12 @@ module PersistentReadmodels =
         eventEnvelopes |> List.choose parameters
 
       if not <| List.isEmpty parameters then
-        do
-          db_connection
-          |> Sql.connect
-          |> Sql.executeTransaction [ query, parameters ]
-          |> ignore
+        db_connection
+        |> Sql.connect
+        |> Sql.executeTransactionAsync [ query, parameters ]
+        |> Async.Ignore
+      else
+        async { return () }
 
 
 module QueryHandlers =

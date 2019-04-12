@@ -13,7 +13,7 @@ type EventEnvelope<'Event> =
   }
 
 type EventListener<'Event> =
-  EventEnvelope<'Event> list -> unit
+  EventEnvelope<'Event> list -> Async<unit>
 
 type EventResult<'Event> =
   Result<EventEnvelope<'Event> list, string>
@@ -246,9 +246,10 @@ module EventStore =
     | Subscribe of EventListener<'Event> * AsyncReplyChannel<Result<unit,string>>
 
   let notifyEventListeners events (subscriptions : EventListener<_> list) =
-      subscriptions
-      |> List.iter (fun subscription -> events |> subscription)
-
+    subscriptions
+    |> List.map (fun subscription -> events |> subscription )
+    |> Async.Parallel
+    |> Async.Ignore
 
 
   let initialize (storage : EventStorage<_>) : EventStore<_> =
@@ -286,9 +287,9 @@ module EventStore =
             | Append (events,reply) ->
                 try
                   do! events |> storage.Append
-                  do eventListeners |> notifyEventListeners events
                   do reply.Reply (Ok ())
 
+                  do! eventListeners |> notifyEventListeners events
                 with exn ->
                   do inbox.Trigger(exn)
                   do exn.Message |> Error |> reply.Reply
@@ -296,17 +297,20 @@ module EventStore =
                 return! loop eventListeners
 
             | Subscribe (listener,reply) ->
+                let notify result =
+                  async {
+                    match result with
+                    | Ok events ->
+                        do reply.Reply (Ok ())
+                        do! events |> listener
+
+                    | Error err ->
+                        do reply.Reply (Error err)
+                  }
+
                 try
-                  let! events = storage.Get()
-
-                  events
-                  |> function
-                      | Ok result ->
-                          do result |> listener
-                          do reply.Reply (Ok ())
-
-                      | Error err ->
-                          do reply.Reply (Error err)
+                  let! eventResult = storage.Get()
+                  do! notify eventResult
 
                 with exn ->
                   do inbox.Trigger(exn)

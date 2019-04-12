@@ -43,7 +43,6 @@ type Command =
   | Restock_flavour of Truck * Flavour * int
 
 
-
 module Projections =
 
   let project projection events =
