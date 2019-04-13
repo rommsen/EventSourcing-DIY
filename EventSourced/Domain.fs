@@ -31,6 +31,7 @@ type Flavour =
 type Event =
 | Truck_added_to_fleet of Truck
 | Truck_already_in_fleet of Truck
+| Truck_was_not_in_fleet of Truck
 | Flavour_sold of Truck * Flavour
 | Flavour_restocked of Truck * Flavour * int
 | Flavour_went_out_of_stock of Truck * Flavour
@@ -98,33 +99,56 @@ module Projections =
     |> Option.defaultValue 0
 
 
+
+  let private updateTrucksInFleet state event =
+    match event with
+    | Truck_added_to_fleet _ ->
+        true
+
+    | _ ->
+        state
+
+  let truckInFleet : Projection<bool, Event> =
+    {
+      Init = false
+      Update = updateTrucksInFleet
+    }
+
+
 module Behaviour =
 
   open Projections
 
   let sellFlavour truck flavour events =
-    let stock =
-      events
-      |> project flavoursInStock
-      |> stockOf flavour
+    if not <| project truckInFleet events then
+      [Truck_was_not_in_fleet truck]
+    else
+      let stock =
+        events
+        |> project flavoursInStock
+        |> stockOf flavour
 
-    match stock with
-    | 0 -> [Flavour_was_not_in_stock (truck,flavour)]
-    | 1 -> [Flavour_sold (truck,flavour) ; Flavour_went_out_of_stock (truck, flavour)]
-    | _ -> [Flavour_sold (truck,flavour)]
+      match stock with
+      | 0 -> [Flavour_was_not_in_stock (truck,flavour)]
+      | 1 -> [Flavour_sold (truck,flavour) ; Flavour_went_out_of_stock (truck, flavour)]
+      | _ -> [Flavour_sold (truck,flavour)]
 
 
   let restock truck flavour portions events =
-    [ Flavour_restocked (truck,flavour,portions) ]
+    if not <| project truckInFleet events then
+      [Truck_was_not_in_fleet truck]
+    else
+      [ Flavour_restocked (truck,flavour,portions) ]
 
 
   let addTruckToFleet truck events =
-    [Truck_added_to_fleet truck]
-
-
+    if project truckInFleet events then
+      [Truck_already_in_fleet truck]
+    else
+      [Truck_added_to_fleet truck]
 
   let behaviour command : EventProducer<Event> =
-    match command with // eventuell hier readmodels reingeben, projections können direkt weitergegeben werden
+    match command with
     | Add_truck_to_fleet truck ->
         addTruckToFleet truck
 

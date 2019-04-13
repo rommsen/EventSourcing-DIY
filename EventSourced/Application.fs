@@ -91,7 +91,6 @@ module InMemoryReadmodels =
       State = fun () -> agent.PostAndAsyncReply State
     }
 
-
 module PersistentReadmodels =
   open Infrastructure
   open Domain

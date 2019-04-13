@@ -464,6 +464,10 @@ module QueryHandler =
 
 
 
+      könnten eventHandler fire and forget machen als mbp aber dann ist es nicht explizit, dass sie async sind
+
+
+
     Danach: Domain nicht sehr komplex: Lets use the SafeConf Planner
 
 

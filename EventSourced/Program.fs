@@ -139,6 +139,8 @@ let main _ =
       ("Query.FlavoursSoldOfTruck (truck2, Strawberry)", fun () -> FlavoursSoldOfTruck (truck2, Strawberry) |> app.HandleQuery |> runAsync |> printQueryResults "Sold Truck 2 Strawberry")
       ("Query.FlavoursSoldOfAll Strawberry", fun () -> FlavoursSoldOfAll Strawberry |> app.HandleQuery |> runAsync |> printQueryResults "Total Sold Strawberry")
       ("Query.FlavoursSoldOfAll Vanilla", fun () -> FlavoursSoldOfAll Vanilla |> app.HandleQuery |> runAsync |> printQueryResults "Total Sold Vanilla")
+      ("Add_truck_to_fleet truck1", fun () -> Add_truck_to_fleet truck1 |> app.HandleCommand truck1_guid |> runAsync |> printCommandResults "Command")
+      ("Add_truck_to_fleet truck2", fun () -> Add_truck_to_fleet truck2 |> app.HandleCommand truck1_guid |> runAsync |> printCommandResults "Command")
       ("Sell_flavour (truck1, Vanilla)", fun () -> Sell_flavour (truck1, Vanilla) |> app.HandleCommand truck1_guid |> runAsync |> printCommandResults "Command")
       ("Sell_flavour (truck2, Vanilla)", fun () -> Sell_flavour (truck2, Vanilla) |> app.HandleCommand truck2_guid |> runAsync |> printCommandResults "Command")
       ("Sell_flavour (truck1, Strawberry)", fun () -> Sell_flavour (truck1, Strawberry) |> app.HandleCommand truck1_guid |> runAsync |> printCommandResults "Command")

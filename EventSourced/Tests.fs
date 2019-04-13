@@ -15,39 +15,44 @@ module Domain =
 
   let truckTests =
     let truck = Truck <| System.Guid.NewGuid()
-    let truck2 = Truck <| System.Guid.NewGuid()
 
     testList "truckTests"
       [
         test "Truck_added_to_fleet" {
-          Given
-            [
-              Truck_added_to_fleet truck
-            ]
+          Given []
           |> When Behaviour.addTruckToFleet truck
           |> Then [Truck_added_to_fleet truck]
         }
 
-        // test "Truck_already_in_fleet" {
-        //   Given
-        //     [
-        //       Truck_added_to_fleet truck
-        //     ]
-        //   |> When Behaviour.addTruckToFleet truck
-        //   |> Then [Truck_already_in_fleet truck]
-        // }
+        test "Truck_already_in_fleet" {
+          Given [ Truck_added_to_fleet truck ]
+          |> When Behaviour.addTruckToFleet truck
+          |> Then [Truck_already_in_fleet truck]
+        }
       ]
 
 
   let sellTests =
     let truck = Truck <| System.Guid.NewGuid()
-    let truck2 = Truck <| System.Guid.NewGuid()
 
     testList "sellFlavour"
       [
+        test "Truck needs to be in fleet when selling Flavour" {
+          Given []
+          |> When (Behaviour.sellFlavour truck Vanilla)
+          |> Then [Truck_was_not_in_fleet truck]
+        }
+
+        test "Truck needs to be in fleet when restocking Flavour" {
+          Given []
+          |> When (Behaviour.restock truck Vanilla 5)
+          |> Then [Truck_was_not_in_fleet truck]
+        }
+
         test "Flavour_sold" {
           Given
             [
+              Truck_added_to_fleet truck
               Flavour_restocked (truck,Vanilla,5)
               Flavour_sold (truck,Vanilla)
               Flavour_sold (truck,Vanilla)
@@ -59,6 +64,7 @@ module Domain =
         test "Flavour_was_not_in_stock" {
           Given
             [
+              Truck_added_to_fleet truck
               Flavour_restocked (truck,Vanilla,5)
               Flavour_restocked (truck,Strawberry,2)
               Flavour_sold (truck,Vanilla)
@@ -72,7 +78,7 @@ module Domain =
         }
 
         test "Flavour_restocked" {
-          Given []
+          Given [ Truck_added_to_fleet truck ]
           |> When (Behaviour.restock truck Vanilla 5)
           |> Then [Flavour_restocked (truck,Vanilla,5)]
         }
@@ -84,4 +90,3 @@ module Domain =
         truckTests
         sellTests
       ]
-
