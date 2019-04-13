@@ -5,7 +5,6 @@ type EventSource = System.Guid
 type EventProducer<'Event> =
   'Event list -> 'Event list
 
-
 type EventEnvelope<'Event> =
   {
     Source : EventSource
@@ -157,45 +156,43 @@ module EventStorage =
     | GetStream of EventSource * AsyncReplyChannel<EventResult<'Event>>
     | Append of EventEnvelope<'Event> list * AsyncReplyChannel<unit>
 
-
   module InMemoryStorage =
 
     let private streamFor source history =
-      history
-      |> List.filter (fun ee -> ee.Source = source)
+      history |> List.filter (fun ee -> ee.Source = source)
 
     let initialize () : EventStorage<'Event> =
       let history : EventEnvelope<'Event> list = []
 
-      let agent =
-        Agent<Msg<_>>.Start(fun inbox ->
-          let rec loop history =
-            async {
-              let! msg = inbox.Receive()
+      let proc (inbox : Agent<Msg<_>>) =
+        let rec loop history =
+          async {
+            let! msg = inbox.Receive()
 
-              match msg with
-              | Get reply ->
-                  history
-                  |> Ok
-                  |> reply.Reply
+            match msg with
+            | Get reply ->
+                history
+                |> Ok
+                |> reply.Reply
 
-                  return! loop history
+                return! loop history
 
-              | GetStream (source,reply) ->
-                  history
-                  |> streamFor source
-                  |> Ok
-                  |> reply.Reply
+            | GetStream (source,reply) ->
+                history
+                |> streamFor source
+                |> Ok
+                |> reply.Reply
 
-                  return! loop history
+                return! loop history
 
-              | Append (events,reply) ->
-                  reply.Reply ()
-                  return! loop (history @ events)
-            }
+            | Append (events,reply) ->
+                reply.Reply ()
+                return! loop (history @ events)
+          }
 
-          loop history
-        )
+        loop history
+
+      let agent = Agent<Msg<_>>.Start(proc)
 
       {
         Get = fun () ->  agent.PostAndAsyncReply Get
@@ -252,52 +249,48 @@ module EventStore =
     | Append of EventEnvelope<'Event> list * AsyncReplyChannel<Result<unit,string>>
 
   let initialize (storage : EventStorage<_>) : EventStore<_> =
-
     let eventsAppended = Event<EventEnvelope<_> list>()
-    let agent =
-      Agent<Msg<_>>.Start(fun inbox ->
-        let rec loop (eventListeners : EventListener<_> list) =
-          async {
-            match! inbox.Receive() with
-            | Get reply ->
-                try
-                  let! events = storage.Get()
 
-                  do events |> reply.Reply
+    let proc (inbox : Agent<Msg<_>>) =
+      let rec loop (eventListeners : EventListener<_> list) =
+        async {
+          match! inbox.Receive() with
+          | Get reply ->
+              try
+                let! events = storage.Get()
+                do events |> reply.Reply
+              with exn ->
+                do inbox.Trigger(exn)
+                do exn.Message |> Error |> reply.Reply
 
-                with exn ->
-                  do inbox.Trigger(exn)
-                  do exn.Message |> Error |> reply.Reply
-
-                return! loop eventListeners
+              return! loop eventListeners
 
 
-            | GetStream (source,reply) ->
-                try
-                  let! stream = source |> storage.GetStream
+          | GetStream (source,reply) ->
+              try
+                let! stream = source |> storage.GetStream
+                do stream |> reply.Reply
+              with exn ->
+                do inbox.Trigger(exn)
+                do exn.Message |> Error |> reply.Reply
 
-                  do stream |> reply.Reply
+              return! loop eventListeners
 
-                with exn ->
-                  do inbox.Trigger(exn)
-                  do exn.Message |> Error |> reply.Reply
+          | Append (events,reply) ->
+              try
+                do! events |> storage.Append
+                do eventsAppended.Trigger events
+                do reply.Reply (Ok ())
+              with exn ->
+                do inbox.Trigger(exn)
+                do exn.Message |> Error |> reply.Reply
 
-                return! loop eventListeners
+              return! loop eventListeners
+        }
 
-            | Append (events,reply) ->
-                try
-                  do! events |> storage.Append
-                  do eventsAppended.Trigger events
-                  do reply.Reply (Ok ())
-                with exn ->
-                  do inbox.Trigger(exn)
-                  do exn.Message |> Error |> reply.Reply
+      loop []
 
-                return! loop eventListeners
-          }
-
-        loop []
-      )
+    let agent =  Agent<Msg<_>>.Start(proc)
 
     {
       Get = fun () -> agent.PostAndAsyncReply Get
@@ -324,16 +317,16 @@ module EventListener =
 
     let proc (inbox : Agent<Msg<_>>) =
       let rec loop (eventHandlers : EventHandler<'Event> list) =
-          async {
-            match! inbox.Receive() with
-            | Notify events ->
-                do! eventHandlers |> notifyEventHandlers events
+        async {
+          match! inbox.Receive() with
+          | Notify events ->
+              do! eventHandlers |> notifyEventHandlers events
 
-                return! loop eventHandlers
+              return! loop eventHandlers
 
-            | Subscribe listener ->
-                return! loop (listener :: eventHandlers)
-          }
+          | Subscribe listener ->
+              return! loop (listener :: eventHandlers)
+        }
 
       loop []
 
@@ -358,34 +351,33 @@ module CommandHandler =
   type Msg<'Command> =
     | Handle of EventSource * 'Command * AsyncReplyChannel<Result<unit,string>>
 
-
   let initialize (behaviour : Behaviour<_,_>) (eventStore : EventStore<_>) : CommandHandler<_> =
-    let agent =
-      Agent<Msg<_>>.Start(fun inbox ->
-        let rec loop () =
-          async {
-            let! msg = inbox.Receive()
+    let proc (inbox : Agent<Msg<_>>) =
+      let rec loop () =
+        async {
+          let! msg = inbox.Receive()
 
-            match msg with
-            | Handle (eventSource,command,reply) ->
-                let! stream = eventSource |> eventStore.GetStream
+          match msg with
+          | Handle (eventSource,command,reply) ->
+              let! stream = eventSource |> eventStore.GetStream
 
-                let newEvents =
-                  stream |> Result.map (asEvents >> behaviour command >> enveloped eventSource)
+              let newEvents =
+                stream |> Result.map (asEvents >> behaviour command >> enveloped eventSource)
 
-                let! result =
-                  newEvents
-                  |> function
-                      | Ok events -> eventStore.Append events
-                      | Error err -> async { return Error err }
+              let! result =
+                newEvents
+                |> function
+                    | Ok events -> eventStore.Append events
+                    | Error err -> async { return Error err }
 
-                do reply.Reply result
+              do reply.Reply result
 
-                return! loop ()
-          }
+              return! loop ()
+        }
 
-        loop ()
-      )
+      loop ()
+
+    let agent = Agent<Msg<_>>.Start(proc)
 
     {
       Handle = fun source command -> agent.PostAndAsyncReply (fun reply -> Handle (source,command,reply))
