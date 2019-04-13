@@ -82,8 +82,6 @@ let db_connection =
 [<EntryPoint>]
 let main _ =
 
-  // runTests ()
-
   let guid (Truck guid) = guid
 
   let truck1 = Truck <| System.Guid.Parse "49d9d107-aceb-4b2d-a7e3-eca784a9de6e"
@@ -91,35 +89,42 @@ let main _ =
 
   let flavoursInStockReadmodel = InMemoryReadmodels.flavoursInStock()
   // let flavoursSoldReadmodel = InMemoryReadmodels.flavoursSold()
-  let queryHandlers =
-    [
-      QueryHandlers.flavours flavoursInStockReadmodel.State db_connection
-    ]
 
-  let eventListener =
-    EventListener.initialize
+  let configuration =
+    {
+      EventStoreInit =
+        EventStore.initialize
 
-  let eventHandlers =
-    [
-      flavoursInStockReadmodel.EventHandler
-      PersistentReadmodels.flavourSoldHandler db_connection
-    ]
+      EventStorageInit =
+        (fun () -> @"C:\temp\store.txt" |> EventStorage.FileStorage.initialize)
 
-  let app =
-    EventSourced<Command,Event,API.Query,obj>(
-      EventStore.initialize,
-      (fun () -> @"C:\temp\store.txt" |> EventStorage.FileStorage.initialize),
-      CommandHandler.initialize Behaviour.behaviour,
-      QueryHandler.initialize queryHandlers,
-      eventListener,
-      eventHandlers
-    )
+      CommandHandlerInit =
+        CommandHandler.initialize Behaviour.behaviour
+
+      QueryHandler =
+        QueryHandler.initialize
+          [
+            QueryHandlers.flavours flavoursInStockReadmodel.State db_connection
+          ]
+
+      EventListenerInit =
+        EventListener.initialize
+
+      EventHandlers =
+        [
+          flavoursInStockReadmodel.EventHandler
+          PersistentReadmodels.flavourSoldHandler db_connection
+        ]
+    }
+
+  let app = EventSourced<Command,Event,API.Query>(configuration)
 
   let truck1_guid = guid truck1
   let truck2_guid = guid truck2
 
   let main =
     [
+      ("Run Tests", runTests >> UI.Helper.waitForAnyKey)
       ("Total History", fun () -> app.GetAllEvents() |> runAsync |> printEvents "all")
       ("History Truck 1", fun () -> truck1_guid |> app.GetStream |> runAsync |> printEvents "Truck 1")
       ("History Truck 2", fun () -> truck2_guid |> app.GetStream |> runAsync |> printEvents "Truck 2")

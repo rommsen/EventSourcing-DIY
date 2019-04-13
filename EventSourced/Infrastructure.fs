@@ -45,14 +45,14 @@ type Projection<'State,'Event> =
     Update : 'State -> 'Event -> 'State
   }
 
-type QueryResult<'Result> =
+type QueryResult =
   | Handled of obj
   | NotHandled
   | QueryError of string
 
-type  QueryHandler<'Query,'Result> =
+type  QueryHandler<'Query> =
   {
-    Handle : 'Query -> Async<QueryResult<'Result>>
+    Handle : 'Query -> Async<QueryResult>
   }
 
 type ReadModel<'Event, 'State> =
@@ -72,6 +72,46 @@ type Behaviour<'Command,'Event> =
 
 
 type DB_Connection_String = DB_Connection_String of string
+
+type EventSourcedConfig<'Comand,'Event,'Query> =
+  {
+    EventStoreInit : EventStorage<'Event> -> EventStore<'Event>
+    EventStorageInit : unit -> EventStorage<'Event>
+    CommandHandlerInit : EventStore<'Event> -> CommandHandler<'Comand>
+    QueryHandler : QueryHandler<'Query>
+    EventListenerInit : unit -> EventListener<'Event>
+    EventHandlers : EventHandler<'Event> list
+  }
+
+type EventSourced<'Comand,'Event,'Query> (configuration : EventSourcedConfig<'Comand,'Event,'Query>) =
+
+  let eventStorage = configuration.EventStorageInit()
+
+  let eventStore = configuration.EventStoreInit eventStorage
+
+  let commandHandler = configuration.CommandHandlerInit eventStore
+
+  let queryHandler = configuration.QueryHandler
+
+  let eventListener = configuration.EventListenerInit()
+
+  do
+    eventStore.OnError.Add(fun exn -> UI.Helper.printError (sprintf "EventStore Error: %s" exn.Message) exn)
+    commandHandler.OnError.Add(fun exn -> UI.Helper.printError (sprintf "CommandHandler Error: %s" exn.Message) exn)
+    eventStore.OnEvents.Add eventListener.Notify
+    configuration.EventHandlers |> List.iter eventListener.Subscribe
+
+  member __.HandleCommand eventSource command =
+    commandHandler.Handle eventSource command
+
+  member __.HandleQuery query =
+    queryHandler.Handle query
+
+  member __.GetAllEvents () =
+    eventStore.Get()
+
+  member __.GetStream eventSource =
+    eventStore.GetStream eventSource
 
 
 /// A wrapper for MailboxProcessor that catches all unhandled exceptions
@@ -109,44 +149,6 @@ type Agent<'T>(f:Agent<'T> -> Async<unit>) as self =
     let agent = new Agent<_>(f)
     agent.Start()
     agent
-
-
-type EventSourced<'Comand,'Event,'Query,'Result>
-  (eventStoreInit : EventStorage<'Event> -> EventStore<'Event>,
-   eventStorageInit : unit -> EventStorage<'Event>,
-   commandHandlerInit : EventStore<'Event> -> CommandHandler<'Comand>,
-   queryHandler : QueryHandler<'Query,'Result>,
-   eventListenerInit : unit -> EventListener<'Event>,
-   eventHandler : EventHandler<'Event> list)
-   =
-
-  let eventStorage = eventStorageInit()
-
-  let eventStore = eventStoreInit eventStorage
-
-  let commandHandler = commandHandlerInit eventStore
-
-  let queryHandler = queryHandler
-
-  let eventListener = eventListenerInit()
-
-  do
-    eventStore.OnError.Add(fun exn -> UI.Helper.printError (sprintf "EventStore Error: %s" exn.Message) exn)
-    commandHandler.OnError.Add(fun exn -> UI.Helper.printError (sprintf "CommandHandler Error: %s" exn.Message) exn)
-    eventStore.OnEvents.Add eventListener.Notify
-    eventHandler |> List.iter eventListener.Subscribe
-
-  member __.HandleCommand eventSource command =
-    commandHandler.Handle eventSource command
-
-  member __.HandleQuery query =
-    queryHandler.Handle query
-
-  member __.GetAllEvents () =
-    eventStore.Get()
-
-  member __.GetStream eventSource =
-    eventStore.GetStream eventSource
 
 
 module EventStorage =
@@ -341,12 +343,10 @@ module EventListener =
 module CommandHandler =
 
   let private asEvents eventEnvelopes =
-    eventEnvelopes
-    |> List.map (fun envelope -> envelope.Event)
+    eventEnvelopes |> List.map (fun envelope -> envelope.Event)
 
   let private enveloped source events =
-    events
-    |> List.map (fun event -> { Source = source ; Event = event })
+    events |> List.map (fun event -> { Source = source ; Event = event })
 
   type Msg<'Command> =
     | Handle of EventSource * 'Command * AsyncReplyChannel<Result<unit,string>>
@@ -385,7 +385,7 @@ module CommandHandler =
     }
 
 module QueryHandler =
-  let rec private choice (queryHandler : QueryHandler<_,_> list) query =
+  let rec private choice (queryHandler : QueryHandler<_> list) query =
     async {
       match queryHandler with
       | handler :: rest ->
@@ -402,7 +402,7 @@ module QueryHandler =
       | _ -> return NotHandled
     }
 
-  let initialize queryHandlers : QueryHandler<_,_> =
+  let initialize queryHandlers : QueryHandler<_> =
    {
       Handle = choice queryHandlers
    }
