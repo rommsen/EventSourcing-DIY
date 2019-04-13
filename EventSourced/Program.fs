@@ -32,8 +32,6 @@ module Helper =
 
     UI.Helper.waitForAnyKey()
 
-
-
   let printQueryResults header result =
     match result with
     | QueryResult.Handled result ->
@@ -60,7 +58,6 @@ module Helper =
   let runAsync asnc =
     asnc |> Async.RunSynchronously
 
-
   let runTests () =
     runTests defaultConfig Domain.domainTests |> ignore
 
@@ -79,6 +76,8 @@ let db_connection =
   |> Sql.str
   |> DB_Connection_String
 
+let eventStoreFile = @"C:\temp\store.txt"
+
 [<EntryPoint>]
 let main _ =
 
@@ -96,7 +95,7 @@ let main _ =
         EventStore.initialize
 
       EventStorageInit =
-        (fun () -> @"C:\temp\store.txt" |> EventStorage.FileStorage.initialize)
+        (fun () -> eventStoreFile |> EventStorage.FileStorage.initialize)
 
       CommandHandlerInit =
         CommandHandler.initialize Behaviour.behaviour
