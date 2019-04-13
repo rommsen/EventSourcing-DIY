@@ -27,10 +27,8 @@ module InMemoryReadmodels =
       |> fun projectionState -> eventEnvelope.Event |> projection.Update projectionState
       |> fun newState -> state |> Map.add eventEnvelope.Source newState
 
-  let flavoursInStock () : ReadModel<_,_> =
+  let readModel (updateState : 'State -> EventEnvelope<'Event> list -> 'State) (initState : 'State) : ReadModel<'Event, 'State> =
     let agent =
-      let initState : Map<EventSource, Map<Flavour, int>> = Map.empty
-
       let eventSubscriber (inbox : Agent<Msg<_,_>>) =
         let rec loop state =
           async {
@@ -38,13 +36,8 @@ module InMemoryReadmodels =
 
             match msg with
             | Notify (eventEnvelopes, reply) ->
-                let newState =
-                  eventEnvelopes
-                  |> List.fold (projectIntoMap Projections.flavoursInStock) state
-
                 reply.Reply ()
-
-                return! loop newState
+                return! loop (eventEnvelopes |> updateState state)
 
             | State reply ->
                 reply.Reply state
@@ -60,36 +53,21 @@ module InMemoryReadmodels =
       State = fun () -> agent.PostAndAsyncReply State
     }
 
+
+  let flavoursInStock () : ReadModel<_,_> =
+    let updateState state eventEnvelopes =
+      eventEnvelopes
+      |> List.fold (projectIntoMap Projections.flavoursInStock) state
+
+    readModel updateState Map.empty
+
   let flavoursSold () : ReadModel<_,_> =
-    let agent =
-      let eventSubscriber (inbox : Agent<Msg<_,_>>) =
-        let rec loop (state : Map<EventSource, Map<Flavour, int>>) =
-          async {
-            let! msg = inbox.Receive()
+    let updateState state eventEnvelopes =
+      eventEnvelopes
+      |> List.fold (projectIntoMap Projections.soldFlavours) state
 
-            match msg with
-            | Notify (eventEnvelopes, reply) ->
-                let newState =
-                  eventEnvelopes
-                  |> List.fold (projectIntoMap Projections.soldFlavours) state
+    readModel updateState Map.empty
 
-                reply.Reply ()
-
-                return! loop newState
-
-            | State reply ->
-                reply.Reply state
-                return! loop state
-          }
-
-        loop Map.empty
-
-      Agent<Msg<_,_>>.Start(eventSubscriber)
-
-    {
-      EventHandler = fun eventEnvelopes -> agent.PostAndAsyncReply(fun reply -> Notify (eventEnvelopes,reply))
-      State = fun () -> agent.PostAndAsyncReply State
-    }
 
 module PersistentReadmodels =
   open Infrastructure
@@ -157,7 +135,7 @@ module QueryHandlers =
                   stockOfTruck
                   |> Map.tryFind flavour
                   |> Option.defaultValue 0
-                  |> (+) total) 0
+                  |> fun stock -> stock + total) 0
               |> box
               |> Handled
           }
