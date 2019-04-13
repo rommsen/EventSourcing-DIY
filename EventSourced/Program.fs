@@ -90,16 +90,19 @@ let main _ =
   let truck2 = Truck <| System.Guid.Parse "8b916bde-6bdf-43cc-b43b-69c9f4c3e5c4"
 
   let flavoursInStockReadmodel = InMemoryReadmodels.flavoursInStock()
-  let flavoursSoldReadmodel = InMemoryReadmodels.flavoursSold()
+  // let flavoursSoldReadmodel = InMemoryReadmodels.flavoursSold()
   let queryHandlers =
     [
       QueryHandlers.flavours flavoursInStockReadmodel.State db_connection
     ]
 
   let eventListener =
+    EventListener.initialize
+
+  let eventHandlers =
     [
-      flavoursInStockReadmodel.EventListener
-      PersistentReadmodels.flavourSoldListener db_connection
+      flavoursInStockReadmodel.EventHandler
+      PersistentReadmodels.flavourSoldHandler db_connection
     ]
 
   let app =
@@ -108,7 +111,8 @@ let main _ =
       (fun () -> @"C:\temp\store.txt" |> EventStorage.FileStorage.initialize),
       CommandHandler.initialize Behaviour.behaviour,
       QueryHandler.initialize queryHandlers,
-      eventListener
+      eventListener,
+      eventHandlers
     )
 
   let truck1_guid = guid truck1

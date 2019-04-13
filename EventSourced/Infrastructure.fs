@@ -12,7 +12,7 @@ type EventEnvelope<'Event> =
     Event : 'Event
   }
 
-type EventListener<'Event> =
+type EventHandler<'Event> =
   EventEnvelope<'Event> list -> Async<unit>
 
 type EventResult<'Event> =
@@ -23,8 +23,14 @@ type EventStore<'Event> =
     Get : unit -> Async<EventResult<'Event>>
     GetStream : EventSource -> Async<EventResult<'Event>>
     Append : EventEnvelope<'Event> list -> Async<Result<unit, string>>
-    Subscribe : EventListener<'Event> -> Async<Result<unit, string>>
     OnError : IEvent<exn>
+    OnEvents : IEvent<EventEnvelope<'Event> list>
+  }
+
+type EventListener<'Event> =
+  {
+    Subscribe : EventHandler<'Event> -> unit
+    Notify : EventEnvelope<'Event> list -> unit
   }
 
 type EventStorage<'Event> =
@@ -52,7 +58,7 @@ type  QueryHandler<'Query,'Result> =
 
 type ReadModel<'Event, 'State> =
   {
-    EventListener : EventListener<'Event>
+    EventHandler : EventHandler<'Event>
     State : unit -> Async<'State>
   }
 
@@ -111,8 +117,9 @@ type EventSourced<'Comand,'Event,'Query,'Result>
    eventStorageInit : unit -> EventStorage<'Event>,
    commandHandlerInit : EventStore<'Event> -> CommandHandler<'Comand>,
    queryHandler : QueryHandler<'Query,'Result>,
-   eventListener : EventListener<'Event> list)
-    =
+   eventListenerInit : unit -> EventListener<'Event>,
+   eventHandler : EventHandler<'Event> list)
+   =
 
   let eventStorage = eventStorageInit()
 
@@ -122,12 +129,13 @@ type EventSourced<'Comand,'Event,'Query,'Result>
 
   let queryHandler = queryHandler
 
+  let eventListener = eventListenerInit()
+
   do
     eventStore.OnError.Add(fun exn -> UI.Helper.printError (sprintf "EventStore Error: %s" exn.Message) exn)
-    commandHandler.OnError.Add(printfn "commandHandler Error: %A")
-
-    eventListener
-    |> List.iter (eventStore.Subscribe >> ignore)
+    commandHandler.OnError.Add(fun exn -> UI.Helper.printError (sprintf "CommandHandler Error: %s" exn.Message) exn)
+    eventStore.OnEvents.Add eventListener.Notify
+    eventHandler |> List.iter eventListener.Subscribe
 
   member __.HandleCommand eventSource command =
     commandHandler.Handle eventSource command
@@ -236,27 +244,19 @@ module EventStorage =
         Append = fun events -> async { return append store events }
       }
 
-
 module EventStore =
 
   type Msg<'Event> =
     | Get of AsyncReplyChannel<EventResult<'Event>>
     | GetStream of EventSource * AsyncReplyChannel<EventResult<'Event>>
     | Append of EventEnvelope<'Event> list * AsyncReplyChannel<Result<unit,string>>
-    | Subscribe of EventListener<'Event> * AsyncReplyChannel<Result<unit,string>>
-
-  let notifyEventListeners events (subscriptions : EventListener<_> list) =
-    subscriptions
-    |> List.map (fun subscription -> events |> subscription )
-    |> Async.Parallel
-    |> Async.Ignore
-
 
   let initialize (storage : EventStorage<_>) : EventStore<_> =
 
+    let eventsAppended = Event<EventEnvelope<_> list>()
     let agent =
       Agent<Msg<_>>.Start(fun inbox ->
-        let rec loop (eventListeners : EventListener<'Event> list) =
+        let rec loop (eventListeners : EventListener<_> list) =
           async {
             match! inbox.Receive() with
             | Get reply ->
@@ -287,35 +287,13 @@ module EventStore =
             | Append (events,reply) ->
                 try
                   do! events |> storage.Append
+                  do eventsAppended.Trigger events
                   do reply.Reply (Ok ())
-
-                  do! eventListeners |> notifyEventListeners events
                 with exn ->
                   do inbox.Trigger(exn)
                   do exn.Message |> Error |> reply.Reply
 
                 return! loop eventListeners
-
-            | Subscribe (listener,reply) ->
-                let notify result =
-                  async {
-                    match result with
-                    | Ok events ->
-                        do reply.Reply (Ok ())
-                        do! events |> listener
-
-                    | Error err ->
-                        do reply.Reply (Error err)
-                  }
-
-                try
-                  let! eventResult = storage.Get()
-                  do! notify eventResult
-
-                with exn ->
-                  do inbox.Trigger(exn)
-
-                return! loop (listener :: eventListeners)
           }
 
         loop []
@@ -325,8 +303,45 @@ module EventStore =
       Get = fun () -> agent.PostAndAsyncReply Get
       GetStream = fun eventSource -> agent.PostAndAsyncReply (fun reply -> GetStream (eventSource,reply))
       Append = fun events -> agent.PostAndAsyncReply (fun reply -> Append (events,reply))
-      Subscribe = fun subscription -> agent.PostAndAsyncReply (fun reply -> Subscribe (subscription, reply))
       OnError = agent.OnError
+      OnEvents = eventsAppended.Publish
+    }
+
+module EventListener =
+
+  type Msg<'Event> =
+    | Notify of EventEnvelope<'Event> list
+    | Subscribe of EventHandler<'Event>
+
+
+  let notifyEventHandlers events (handlers : EventHandler<_> list) =
+    handlers
+    |> List.map (fun subscription -> events |> subscription )
+    |> Async.Parallel
+    |> Async.Ignore
+
+  let initialize () : EventListener<_> =
+
+    let proc (inbox : Agent<Msg<_>>) =
+      let rec loop (eventHandlers : EventHandler<'Event> list) =
+          async {
+            match! inbox.Receive() with
+            | Notify events ->
+                do! eventHandlers |> notifyEventHandlers events
+
+                return! loop eventHandlers
+
+            | Subscribe listener ->
+                return! loop (listener :: eventHandlers)
+          }
+
+      loop []
+
+    let agent = Agent<Msg<_>>.Start(proc)
+
+    {
+      Notify = Notify >> agent.Post
+      Subscribe = Subscribe >> agent.Post
     }
 
 
@@ -358,13 +373,11 @@ module CommandHandler =
                 let newEvents =
                   stream |> Result.map (asEvents >> behaviour command >> enveloped eventSource)
 
-
                 let! result =
                   newEvents
                   |> function
                       | Ok events -> eventStore.Append events
                       | Error err -> async { return Error err }
-
 
                 do reply.Reply result
 
@@ -445,6 +458,10 @@ module QueryHandler =
           nur schreiben, lesen geschieht im Query Handler <- habe dies gemacht
 
 
+      * Events als observable?
+          dann bräuchte man erstmal keine Position!
+
+
       * nochmal Gedanken zu messaging (commandHandler ohne result oder mit?)
       * tests
 
@@ -462,4 +479,8 @@ module QueryHandler =
    ACHTUNG: Programm stürzt ab bei Commands
 
   *)
+
+
+
+
 

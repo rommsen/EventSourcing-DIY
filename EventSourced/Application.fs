@@ -56,7 +56,7 @@ module InMemoryReadmodels =
       Agent<Msg<_,_>>.Start(eventSubscriber)
 
     {
-      EventListener = fun eventEnvelopes -> agent.PostAndAsyncReply(fun reply -> Notify (eventEnvelopes,reply))
+      EventHandler = fun eventEnvelopes -> agent.PostAndAsyncReply(fun reply -> Notify (eventEnvelopes,reply))
       State = fun () -> agent.PostAndAsyncReply State
     }
 
@@ -87,7 +87,7 @@ module InMemoryReadmodels =
       Agent<Msg<_,_>>.Start(eventSubscriber)
 
     {
-      EventListener = fun eventEnvelopes -> agent.PostAndAsyncReply(fun reply -> Notify (eventEnvelopes,reply))
+      EventHandler = fun eventEnvelopes -> agent.PostAndAsyncReply(fun reply -> Notify (eventEnvelopes,reply))
       State = fun () -> agent.PostAndAsyncReply State
     }
 
@@ -107,7 +107,7 @@ module PersistentReadmodels =
 
     | _ -> None
 
-  let flavourSoldListener (DB_Connection_String db_connection) : EventListener<Event> =
+  let flavourSoldHandler (DB_Connection_String db_connection) : EventHandler<Event> =
     let query = """
       INSERT INTO flavours_sold (truck, flavour, sold) VALUES (@truck, @flavour, 1)
       ON CONFLICT (truck,flavour) DO UPDATE SET sold = flavours_sold.sold + 1"""
