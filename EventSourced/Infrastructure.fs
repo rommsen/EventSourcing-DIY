@@ -1,4 +1,5 @@
 namespace Infrastructure
+open System
 
 type EventSource = System.Guid
 
@@ -8,6 +9,7 @@ type EventProducer<'Event> =
 type EventEnvelope<'Event> =
   {
     Source : EventSource
+    DateUtc : DateTime
     Event : 'Event
   }
 
@@ -346,7 +348,15 @@ module CommandHandler =
     eventEnvelopes |> List.map (fun envelope -> envelope.Event)
 
   let private enveloped source events =
-    events |> List.map (fun event -> { Source = source ; Event = event })
+    let now = System.DateTime.UtcNow
+    let envelope event =
+      {
+          Source = source
+          DateUtc = now
+          Event = event
+      }
+
+    events |> List.map envelope
 
   type Msg<'Command> =
     | Handle of EventSource * 'Command * AsyncReplyChannel<Result<unit,string>>
@@ -473,6 +483,10 @@ module QueryHandler =
 
 
    ACHTUNG: Programm stürzt ab bei Commands
+
+
+   erwähnen:
+   man könnte correlations einfügen
 
   *)
 
