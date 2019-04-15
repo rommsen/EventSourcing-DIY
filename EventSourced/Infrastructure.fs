@@ -1,15 +1,21 @@
 namespace Infrastructure
 open System
+open Option
 
 type EventSource = System.Guid
 
 type EventProducer<'Event> =
   'Event list -> 'Event list
 
-type EventEnvelope<'Event> =
+type EventMetadata =
   {
     Source : EventSource
     DateUtc : DateTime
+  }
+
+type EventEnvelope<'Event> =
+  {
+    Metadata : EventMetadata
     Event : 'Event
   }
 
@@ -154,16 +160,18 @@ type Agent<'T>(f:Agent<'T> -> Async<unit>) as self =
 
 
 module EventStorage =
-  type Msg<'Event> =
-    private
-    | Get of AsyncReplyChannel<EventResult<'Event>>
-    | GetStream of EventSource * AsyncReplyChannel<EventResult<'Event>>
-    | Append of EventEnvelope<'Event> list * AsyncReplyChannel<unit>
+
 
   module InMemoryStorage =
 
+    type Msg<'Event> =
+      private
+      | Get of AsyncReplyChannel<EventResult<'Event>>
+      | GetStream of EventSource * AsyncReplyChannel<EventResult<'Event>>
+      | Append of EventEnvelope<'Event> list * AsyncReplyChannel<unit>
+
     let private streamFor source history =
-      history |> List.filter (fun ee -> ee.Source = source)
+      history |> List.filter (fun ee -> ee.Metadata.Source = source)
 
     let initialize () : EventStorage<'Event> =
       let history : EventEnvelope<'Event> list = []
@@ -209,14 +217,6 @@ module EventStorage =
     open System.IO
     open Thoth.Json.Net
 
-    let private writeEvents store events =
-      use streamWriter = new StreamWriter(store, true)
-      events
-      |> List.map (fun eventEnvelope -> Encode.Auto.toString(0,eventEnvelope))
-      |> List.iter streamWriter.WriteLine
-
-      do streamWriter.Flush()
-
     let private get store =
       store
       |> File.ReadLines
@@ -227,7 +227,7 @@ module EventStorage =
       store
       |> File.ReadLines
       |> Seq.traverseResult Decode.Auto.fromString<EventEnvelope<'Event>>
-      |> Result.map (Seq.filter (fun ee -> ee.Source = source) >> List.ofSeq)
+      |> Result.map (Seq.filter (fun ee -> ee.Metadata.Source = source) >> List.ofSeq)
 
     let private append store events =
       use streamWriter = new StreamWriter(store, true)
@@ -243,6 +243,81 @@ module EventStorage =
         Get = fun () -> async { return get store }
         GetStream = fun eventSource -> async { return getStream store eventSource  }
         Append = fun events -> async { return append store events }
+      }
+
+  module PostgresStorage =
+
+    open System.IO
+    open Npgsql.FSharp
+    open Thoth.Json.Net
+
+    let private hydrateEventEnvelopes reader =
+      let row = Sql.readRow reader
+      maybe {
+        let! metadata = Sql.readString "metadata" row
+        let! event = Sql.readString "event" row
+
+        let eventEnvelope =
+          metadata
+          |> Decode.Auto.fromString<EventMetadata>
+          |> Result.bind (fun metadata ->
+              event
+              |> Decode.Auto.fromString<'Event>
+              |> Result.map (fun event -> { Metadata = metadata ; Event = event}))
+
+        return eventEnvelope
+      }
+
+    let private get (DB_Connection_String db_connection) =
+      async {
+        return
+          db_connection
+          |> Sql.connect
+          |> Sql.query "SELECT * FROM event_store"
+          |> Sql.executeReader hydrateEventEnvelopes
+          |> Seq.traverseResult id
+          |> Result.map List.ofSeq
+      }
+
+    let private getStream (DB_Connection_String db_connection) source =
+      async {
+        return
+          db_connection
+          |> Sql.connect
+          |> Sql.query "SELECT * FROM event_store WHERE source = @source"
+          |> Sql.parameters [ "@source", SqlValue.Uuid source ]
+          |> Sql.executeReader hydrateEventEnvelopes
+          |> Seq.traverseResult id
+          |> Result.map List.ofSeq
+      }
+
+    let private append (DB_Connection_String db_connection) eventEnvelopes =
+      let query = """
+        INSERT INTO event_store (source, datetimeUtc, metadata, event)
+        VALUES (@source, @datetimeUtc, @metadata, @event)"""
+
+      let parameters =
+        eventEnvelopes
+        |> List.map (fun eventEnvelope ->
+            [
+              "@source", SqlValue.Uuid eventEnvelope.Metadata.Source
+              "@datetimeUtc", SqlValue.Date eventEnvelope.Metadata.DateUtc
+              "@metadata", SqlValue.Jsonb <| Encode.Auto.toString(0,eventEnvelope.Metadata)
+              "@event", SqlValue.Jsonb <| Encode.Auto.toString(0,eventEnvelope.Event)
+            ])
+
+      db_connection
+      |> Sql.connect
+      |> Sql.executeTransactionAsync [ query, parameters ]
+      |> Async.Ignore
+
+
+
+    let initialize db_connection : EventStorage<_> =
+      {
+        Get = fun () -> get db_connection
+        GetStream = fun eventSource -> getStream db_connection eventSource
+        Append = fun events -> append db_connection events
       }
 
 module EventStore =
@@ -351,8 +426,10 @@ module CommandHandler =
     let now = System.DateTime.UtcNow
     let envelope event =
       {
-          Source = source
-          DateUtc = now
+          Metadata = {
+            Source = source
+            DateUtc = now
+          }
           Event = event
       }
 
@@ -487,6 +564,12 @@ module QueryHandler =
 
    erwähnen:
    man könnte correlations einfügen
+
+
+   wenn man die DB hat, braucht man eine Event Position zum abholen
+
+
+   eventposition braucht man, wenn man db eventstore hat
 
   *)
 

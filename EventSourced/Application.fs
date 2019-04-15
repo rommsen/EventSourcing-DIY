@@ -22,10 +22,10 @@ module InMemoryReadmodels =
   let projectIntoMap projection =
     fun state eventEnvelope ->
       state
-      |> Map.tryFind eventEnvelope.Source
+      |> Map.tryFind eventEnvelope.Metadata.Source
       |> Option.defaultValue projection.Init
       |> fun projectionState -> eventEnvelope.Event |> projection.Update projectionState
-      |> fun newState -> state |> Map.add eventEnvelope.Source newState
+      |> fun newState -> state |> Map.add eventEnvelope.Metadata.Source newState
 
   let readModel (updateState : 'State -> EventEnvelope<'Event> list -> 'State) (initState : 'State) : ReadModel<'Event, 'State> =
     let agent =
