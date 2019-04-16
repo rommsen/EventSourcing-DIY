@@ -104,8 +104,8 @@ type EventSourced<'Comand,'Event,'Query> (configuration : EventSourcedConfig<'Co
   let eventListener = configuration.EventListenerInit()
 
   do
-    eventStore.OnError.Add(fun exn -> UI.Helper.printError (sprintf "EventStore Error: %s" exn.Message) exn)
-    commandHandler.OnError.Add(fun exn -> UI.Helper.printError (sprintf "CommandHandler Error: %s" exn.Message) exn)
+    eventStore.OnError.Add(fun exn -> Helper.printError (sprintf "EventStore Error: %s" exn.Message) exn)
+    commandHandler.OnError.Add(fun exn -> Helper.printError (sprintf "CommandHandler Error: %s" exn.Message) exn)
     eventStore.OnEvents.Add eventListener.Notify
     configuration.EventHandlers |> List.iter eventListener.Subscribe
 
@@ -160,7 +160,6 @@ type Agent<'T>(f:Agent<'T> -> Async<unit>) as self =
 
 
 module EventStorage =
-
 
   module InMemoryStorage =
 

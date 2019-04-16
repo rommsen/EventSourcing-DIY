@@ -1,71 +1,64 @@
 open Infrastructure
-module Helper =
-
-  open Expecto
-  open Domain
-  open Tests
-
-  let printUl list =
-    list
-    |> List.iteri (fun i item -> printfn " %i: %A" (i+1) item)
-
-  let printEvents header events =
-    match events with
-    | Ok events ->
-        events
-        |> List.length
-        |> printfn "\nHistory for %s (Length: %i)" header
-
-        events |> printUl
-
-    | Error error -> UI.Helper.printError (sprintf "Error when retrieving events: %s" error) ""
-
-    UI.Helper.waitForAnyKey()
-
-  let printCommandResults header result =
-    match result with
-    | Ok _ ->
-        printfn "\n%s: %A" header result
-
-    | Error error ->
-        UI.Helper.printError (sprintf "Command Error: %s" error) ""
-
-    UI.Helper.waitForAnyKey()
-
-  let printQueryResults header result =
-    match result with
-    | QueryResult.Handled result ->
-        printfn "\n%s: %A" header result
-
-    | QueryResult.NotHandled ->
-        printfn "\n%s: NOT HANDLED" header
-
-    | QueryResult.QueryError error ->
-        UI.Helper.printError (sprintf "Query Error: %s" error) ""
-
-    UI.Helper.waitForAnyKey()
-
-  let printSoldFlavour flavour state =
-    state
-    |> Projections.soldOfFlavour flavour
-    |> printfn "\nSold %A: %i" flavour
-
-  let printStockOf flavour state =
-    state
-    |> Projections.stockOf flavour
-    |> printfn "\nStock of %A: %i" flavour
-
-  let runAsync asnc =
-    asnc |> Async.RunSynchronously
-
-  let runTests () =
-    runTests defaultConfig Domain.domainTests |> ignore
-
-open Application
+open Expecto
 open Domain
+open Tests
+open Application
 open API
 open Helper
 open Npgsql.FSharp
+
+
+let printEvents header events =
+  match events with
+  | Ok events ->
+      events
+      |> List.length
+      |> printfn "\nHistory for %s (Length: %i)" header
+
+      events |> printUl
+
+  | Error error -> printError (sprintf "Error when retrieving events: %s" error) ""
+
+  waitForAnyKey()
+
+let printCommandResults header result =
+  match result with
+  | Ok _ ->
+      printfn "\n%s: %A" header result
+
+  | Error error ->
+      printError (sprintf "Command Error: %s" error) ""
+
+  waitForAnyKey()
+
+let printQueryResults header result =
+  match result with
+  | QueryResult.Handled result ->
+      printfn "\n%s: %A" header result
+
+  | QueryResult.NotHandled ->
+      printfn "\n%s: NOT HANDLED" header
+
+  | QueryResult.QueryError error ->
+      printError (sprintf "Query Error: %s" error) ""
+
+  waitForAnyKey()
+
+let printSoldFlavour flavour state =
+  state
+  |> Projections.soldOfFlavour flavour
+  |> printfn "\nSold %A: %i" flavour
+
+let printStockOf flavour state =
+  state
+  |> Projections.stockOf flavour
+  |> printfn "\nStock of %A: %i" flavour
+
+let runAsync asnc =
+  asnc |> Async.RunSynchronously
+
+let runTests () =
+  runTests defaultConfig Domain.domainTests |> ignore
 
 let db_connection =
   Sql.host "localhost"
@@ -123,7 +116,7 @@ let main _ =
 
   let main =
     [
-      ("Run Tests", runTests >> UI.Helper.waitForAnyKey)
+      ("Run Tests", runTests >> waitForAnyKey)
       ("Total History", fun () -> app.GetAllEvents() |> runAsync |> printEvents "all")
       ("History Truck 1", fun () -> truck1_guid |> app.GetStream |> runAsync |> printEvents "Truck 1")
       ("History Truck 2", fun () -> truck2_guid |> app.GetStream |> runAsync |> printEvents "Truck 2")

@@ -22,8 +22,8 @@
     <Compile Include="Step4/Domain4.fs" />
     <Compile Include="Step4/Program4.fs" />
     <Compile Include="Step4/Tests4.fs" />
-    <Compile Include="UI/Menu.fs" />
-    <Compile Include="UI/Helper.fs" />
+    <Compile Include="Helper.fs" />
+    <Compile Include="../UI/Menu.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
   <Import Project="..\.paket\Paket.Restore.targets" />

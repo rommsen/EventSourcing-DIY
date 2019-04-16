@@ -6,8 +6,8 @@
   <ItemGroup>
     <Compile Include="Extensions/Option.fs" />
     <Compile Include="Extensions/Seq.fs" />
-    <Compile Include="../Talk/UI/Helper.fs" />
-    <Compile Include="../Talk/UI/Menu.fs" />
+    <Compile Include="../UI/Menu.fs" />
+    <Compile Include="Helper.fs" />
     <Compile Include="Infrastructure.fs" />
     <Compile Include="Domain.fs" />
     <Compile Include="Application.fs" />

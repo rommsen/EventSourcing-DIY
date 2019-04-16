@@ -1,6 +1,6 @@
 ﻿open UI
-open UI.Helper
 open Expecto
+open Helper
 
 
 let step1 =

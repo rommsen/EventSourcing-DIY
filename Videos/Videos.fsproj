@@ -22,8 +22,8 @@
     <Compile Include="Step9/Application9.fs" />
     <Compile Include="Step9/Tests9.fs" />
 
-    <Compile Include="../Talk/UI/Helper.fs" />
-    <Compile Include="../Talk/UI/Menu.fs" />
+    <Compile Include="Helper.fs" />
+    <Compile Include="../UI/Menu.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
   <Import Project="..\.paket\Paket.Restore.targets" />
