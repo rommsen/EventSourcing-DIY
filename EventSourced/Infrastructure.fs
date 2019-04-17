@@ -11,6 +11,7 @@ type EventMetadata =
   {
     Source : EventSource
     DateUtc : DateTime
+    Position : int64
   }
 
 type EventEnvelope<'Event> =
@@ -246,7 +247,6 @@ module EventStorage =
 
   module PostgresStorage =
 
-    open System.IO
     open Npgsql.FSharp
     open Thoth.Json.Net
 
@@ -330,7 +330,7 @@ module EventStore =
     let eventsAppended = Event<EventEnvelope<_> list>()
 
     let proc (inbox : Agent<Msg<_>>) =
-      let rec loop (eventListeners : EventListener<_> list) =
+      let rec loop () =
         async {
           match! inbox.Receive() with
           | Get reply ->
@@ -341,7 +341,7 @@ module EventStore =
                 do inbox.Trigger(exn)
                 do exn.Message |> Error |> reply.Reply
 
-              return! loop eventListeners
+              return! loop ()
 
 
           | GetStream (source,reply) ->
@@ -352,7 +352,7 @@ module EventStore =
                 do inbox.Trigger(exn)
                 do exn.Message |> Error |> reply.Reply
 
-              return! loop eventListeners
+              return! loop ()
 
           | Append (events,reply) ->
               try
@@ -363,10 +363,10 @@ module EventStore =
                 do inbox.Trigger(exn)
                 do exn.Message |> Error |> reply.Reply
 
-              return! loop eventListeners
+              return! loop ()
         }
 
-      loop []
+      loop ()
 
     let agent =  Agent<Msg<_>>.Start(proc)
 
@@ -566,6 +566,7 @@ module QueryHandler =
 
 
    wenn man die DB hat, braucht man eine Event Position zum abholen
+   erstmal ohne dann mit
 
 
    eventposition braucht man, wenn man db eventstore hat
