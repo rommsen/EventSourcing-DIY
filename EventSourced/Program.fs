@@ -6,7 +6,7 @@ open Application
 open API
 open Helper
 open Npgsql.FSharp
-
+open Helper
 
 let printEvents header events =
   match events with
@@ -71,6 +71,25 @@ let db_connection =
 
 let eventStoreFile = @"C:\temp\store.txt"
 
+
+let clean_sold_flavours_readmodel (DB_Connection_String db_connection) =
+  let query = "TRUNCATE TABLE flavours_sold"
+  db_connection
+  |> Sql.connect
+  |> Sql.query query
+  |> Sql.executeNonQuery
+
+let repopulate_readmodel eventHandler (eventResult : Async<EventResult<_>>) =
+  async {
+    match! eventResult with
+    | Ok results ->
+        return! eventHandler results
+
+    | Error err ->
+        printfn "Error: %s" err
+        return ()
+  }
+
 [<EntryPoint>]
 let main _ =
 
@@ -88,7 +107,7 @@ let main _ =
         EventStore.initialize
 
       EventStorageInit =
-        (fun () -> eventStoreFile |> EventStorage.FileStorage.initialize)
+        (fun () -> db_connection |> EventStorage.PostgresStorage.initialize)
 
       CommandHandlerInit =
         CommandHandler.initialize Behaviour.behaviour
@@ -116,7 +135,8 @@ let main _ =
 
   let main =
     [
-      ("Run Tests", runTests >> waitForAnyKey)
+      ("Clean Flavours Sold Readmodel", fun () -> clean_sold_flavours_readmodel db_connection |>  printfn "Clean Result %A";  waitForAnyKey())
+      ("Repopulate Flavours Sold Readmodel",  fun () -> app.GetAllEvents() |> repopulate_readmodel (PersistentReadmodels.flavourSoldHandler db_connection) |> runAsync ;  waitForAnyKey())
       ("Total History", fun () -> app.GetAllEvents() |> runAsync |> printEvents "all")
       ("History Truck 1", fun () -> truck1_guid |> app.GetStream |> runAsync |> printEvents "Truck 1")
       ("History Truck 2", fun () -> truck2_guid |> app.GetStream |> runAsync |> printEvents "Truck 2")

@@ -10,8 +10,7 @@ type EventProducer<'Event> =
 type EventMetadata =
   {
     Source : EventSource
-    DateUtc : DateTime
-    Position : int64
+    RecordedAtUtc : DateTime
   }
 
 type EventEnvelope<'Event> =
@@ -250,17 +249,20 @@ module EventStorage =
     open Npgsql.FSharp
     open Thoth.Json.Net
 
+    let select = "SELECT metadata, payload FROM event_store"
+    let order = "ORDER BY recorded_at_utc ASC, event_index ASC"
+
     let private hydrateEventEnvelopes reader =
       let row = Sql.readRow reader
       maybe {
         let! metadata = Sql.readString "metadata" row
-        let! event = Sql.readString "event" row
+        let! payload = Sql.readString "payload" row
 
         let eventEnvelope =
           metadata
           |> Decode.Auto.fromString<EventMetadata>
           |> Result.bind (fun metadata ->
-              event
+              payload
               |> Decode.Auto.fromString<'Event>
               |> Result.map (fun event -> { Metadata = metadata ; Event = event}))
 
@@ -272,7 +274,7 @@ module EventStorage =
         return
           db_connection
           |> Sql.connect
-          |> Sql.query "SELECT * FROM event_store"
+          |> Sql.query (sprintf "%s %s" select order)
           |> Sql.executeReader hydrateEventEnvelopes
           |> Seq.traverseResult id
           |> Result.map List.ofSeq
@@ -283,7 +285,7 @@ module EventStorage =
         return
           db_connection
           |> Sql.connect
-          |> Sql.query "SELECT * FROM event_store WHERE source = @source"
+          |> Sql.query (sprintf "%s WHERE source = @source %s" select order)
           |> Sql.parameters [ "@source", SqlValue.Uuid source ]
           |> Sql.executeReader hydrateEventEnvelopes
           |> Seq.traverseResult id
@@ -292,24 +294,24 @@ module EventStorage =
 
     let private append (DB_Connection_String db_connection) eventEnvelopes =
       let query = """
-        INSERT INTO event_store (source, datetimeUtc, metadata, event)
-        VALUES (@source, @datetimeUtc, @metadata, @event)"""
+        INSERT INTO event_store (source, recorded_at_utc, event_index, metadata, payload)
+        VALUES (@source, @recorded_at_utc, @event_index, @metadata, @payload)"""
 
       let parameters =
         eventEnvelopes
-        |> List.map (fun eventEnvelope ->
+        |> List.mapi (fun index eventEnvelope ->
             [
               "@source", SqlValue.Uuid eventEnvelope.Metadata.Source
-              "@datetimeUtc", SqlValue.Date eventEnvelope.Metadata.DateUtc
+              "@recorded_at_utc", SqlValue.Date eventEnvelope.Metadata.RecordedAtUtc
+              "@event_index", SqlValue.Int index
               "@metadata", SqlValue.Jsonb <| Encode.Auto.toString(0,eventEnvelope.Metadata)
-              "@event", SqlValue.Jsonb <| Encode.Auto.toString(0,eventEnvelope.Event)
+              "@payload", SqlValue.Jsonb <| Encode.Auto.toString(0,eventEnvelope.Event)
             ])
 
       db_connection
       |> Sql.connect
       |> Sql.executeTransactionAsync [ query, parameters ]
       |> Async.Ignore
-
 
 
     let initialize db_connection : EventStorage<_> =
@@ -427,7 +429,7 @@ module CommandHandler =
       {
           Metadata = {
             Source = source
-            DateUtc = now
+            RecordedAtUtc = now
           }
           Event = event
       }
@@ -563,6 +565,9 @@ module QueryHandler =
 
    erwähnen:
    man könnte correlations einfügen
+   event Position
+   position in stream
+   optimisti locking
 
 
    wenn man die DB hat, braucht man eine Event Position zum abholen
@@ -570,6 +575,14 @@ module QueryHandler =
 
 
    eventposition braucht man, wenn man db eventstore hat
+
+
+
+   Todo:
+    Menu mit untermenüs
+    Storages in eigenen Ordner
+    Funktionen zum Erstellen der Tables
+
 
   *)
 
