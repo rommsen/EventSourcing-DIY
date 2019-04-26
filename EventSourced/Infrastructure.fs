@@ -218,14 +218,15 @@ module EventStorage =
     let private get store =
       store
       |> File.ReadLines
-      |> Seq.traverseResult Decode.Auto.fromString<EventEnvelope<'Event>>
-      |> Result.map List.ofSeq
+      |> List.ofSeq
+      |> List.traverseResult Decode.Auto.fromString<EventEnvelope<'Event>>
 
     let private getStream store source =
       store
       |> File.ReadLines
-      |> Seq.traverseResult Decode.Auto.fromString<EventEnvelope<'Event>>
-      |> Result.map (Seq.filter (fun ee -> ee.Metadata.Source = source) >> List.ofSeq)
+      |> List.ofSeq
+      |> List.traverseResult Decode.Auto.fromString<EventEnvelope<'Event>>
+      |> Result.map (List.filter (fun ee -> ee.Metadata.Source = source))
 
     let private append store events =
       use streamWriter = new StreamWriter(store, true)
@@ -276,8 +277,7 @@ module EventStorage =
           |> Sql.connect
           |> Sql.query (sprintf "%s %s" select order)
           |> Sql.executeReader hydrateEventEnvelopes
-          |> Seq.traverseResult id
-          |> Result.map List.ofSeq
+          |> List.traverseResult id
       }
 
     let private getStream (DB_Connection_String db_connection) source =
@@ -288,8 +288,7 @@ module EventStorage =
           |> Sql.query (sprintf "%s WHERE source = @source %s" select order)
           |> Sql.parameters [ "@source", SqlValue.Uuid source ]
           |> Sql.executeReader hydrateEventEnvelopes
-          |> Seq.traverseResult id
-          |> Result.map List.ofSeq
+          |> List.traverseResult id
       }
 
     let private append (DB_Connection_String db_connection) eventEnvelopes =

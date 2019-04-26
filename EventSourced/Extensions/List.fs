@@ -1,4 +1,4 @@
-module Seq
+module List
 
     /// Map a Result producing function over a list to get a new Result
     /// ('a -> Result<'b>) -> 'a list -> Result<'b list>
@@ -15,5 +15,4 @@ module Seq
           tail >>= (fun t ->
           retn (h :: t) ))
 
-      Seq.foldBack folder list initState
-      |> Result.map (fun result -> result |> List.toSeq)
+      List.foldBack folder list initState
