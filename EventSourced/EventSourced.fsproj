@@ -4,10 +4,18 @@
     <TargetFramework>netcoreapp2.2</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="Extensions/List.fs" />
+    <Compile Include="Utils/Agent.fs" />
+    <Compile Include="Utils/List.fs" />
+    <Compile Include="Utils/Helper.fs" />
     <Compile Include="../UI/Menu.fs" />
-    <Compile Include="Helper.fs" />
-    <Compile Include="Infrastructure.fs" />
+    <Compile Include="Infrastructure/Types.fs" />
+    <Compile Include="Infrastructure/EventStorage/InMemoryStorage.fs" />
+    <Compile Include="Infrastructure/EventStorage/FileStorage.fs" />
+    <Compile Include="Infrastructure/EventStorage/PostgresStorage.fs" />
+    <Compile Include="Infrastructure/EventStore.fs" />
+    <Compile Include="Infrastructure/EventListener.fs" />
+    <Compile Include="Infrastructure/QueryHandler.fs" />
+    <Compile Include="Infrastructure/CommandHandler.fs" />
     <Compile Include="Domain.fs" />
     <Compile Include="Application.fs" />
     <Compile Include="Tests.fs" />

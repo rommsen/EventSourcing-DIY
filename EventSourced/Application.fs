@@ -13,6 +13,7 @@ module API =
 
 module InMemoryReadmodels =
   open Infrastructure
+  open Agent
   open Domain
 
   type Msg<'Event,'Result> =
