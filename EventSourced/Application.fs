@@ -54,7 +54,6 @@ module InMemoryReadmodels =
       State = fun () -> agent.PostAndAsyncReply State
     }
 
-
   let flavoursInStock () : ReadModel<_,_> =
     let updateState state eventEnvelopes =
       eventEnvelopes
@@ -101,6 +100,25 @@ module PersistentReadmodels =
         |> Async.Ignore
       else
         async { return () }
+
+
+  let clean_sold_flavours (DB_Connection_String db_connection) =
+    let query = "TRUNCATE TABLE flavours_sold"
+    db_connection
+    |> Sql.connect
+    |> Sql.query query
+    |> Sql.executeNonQuery
+
+  let repopulate_sold_flavours eventHandler (eventResult : Async<EventResult<_>>) =
+    async {
+      match! eventResult with
+      | Ok results ->
+          return! eventHandler results
+
+      | Error err ->
+          printfn "Error: %s" err
+          return ()
+    }
 
 
 module QueryHandlers =

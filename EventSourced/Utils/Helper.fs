@@ -2,6 +2,9 @@ module Helper
 
   open System
 
+  let waitForAnyKey () =
+    Console.ReadKey() |> ignore
+
   let inline printError message details =
     Console.ForegroundColor <- ConsoleColor.Red
     printfn "\n%s" message
@@ -12,11 +15,45 @@ module Helper
     list
     |> List.iteri (fun i item -> printfn " %i: %A" (i+1) item)
 
+  let printEvents header events =
+    match events with
+    | Ok events ->
+        events
+        |> List.length
+        |> printfn "\nHistory for %s (Length: %i)" header
+
+        events |> printUl
+
+    | Error error -> printError (sprintf "Error when retrieving events: %s" error) ""
+
+    waitForAnyKey()
+
+  let printQueryResults header result =
+    match result with
+    | Infrastructure.QueryResult.Handled result ->
+        printfn "\n%s: %A" header result
+
+    | Infrastructure.QueryResult.NotHandled ->
+        printfn "\n%s: NOT HANDLED" header
+
+    | Infrastructure.QueryResult.QueryError error ->
+        printError (sprintf "Query Error: %s" error) ""
+
+    waitForAnyKey()
+
+
+  let printCommandResults header result =
+    match result with
+    | Ok _ ->
+        printfn "\n%s: %A" header result
+
+    | Error error ->
+        printError (sprintf "Command Error: %s" error) ""
+
+    waitForAnyKey()
+
   let runAsync asnc =
     asnc |> Async.RunSynchronously
-
-  let waitForAnyKey () =
-    Console.ReadKey() |> ignore
 
 
   type OptionBuilder() =

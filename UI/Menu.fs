@@ -53,6 +53,9 @@ module Menu =
 
           loop selected
 
+      | ConsoleKey.Escape ->
+          ()
+
       | ConsoleKey.Enter ->
           if selected <> (options |> Seq.length) - 1 then
             options
