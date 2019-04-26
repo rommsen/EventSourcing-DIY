@@ -1,6 +1,5 @@
 namespace Infrastructure
 open System
-open Option
 
 type EventSource = System.Guid
 
@@ -248,13 +247,14 @@ module EventStorage =
 
     open Npgsql.FSharp
     open Thoth.Json.Net
+    open Helper
 
     let select = "SELECT metadata, payload FROM event_store"
     let order = "ORDER BY recorded_at_utc ASC, event_index ASC"
 
     let private hydrateEventEnvelopes reader =
       let row = Sql.readRow reader
-      maybe {
+      option {
         let! metadata = Sql.readString "metadata" row
         let! payload = Sql.readString "payload" row
 

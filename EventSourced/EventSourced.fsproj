@@ -4,7 +4,6 @@
     <TargetFramework>netcoreapp2.1</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="Extensions/Option.fs" />
     <Compile Include="Extensions/Seq.fs" />
     <Compile Include="../UI/Menu.fs" />
     <Compile Include="Helper.fs" />
