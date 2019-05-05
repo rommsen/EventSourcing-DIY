@@ -4,24 +4,6 @@
     <TargetFramework>netcoreapp2.1</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="Step6/Infrastructure6.fs" />
-    <Compile Include="Step6/Domain6.fs" />
-    <Compile Include="Step6/Application6.fs" />
-    <Compile Include="Step6/Tests6.fs" />
-    <Compile Include="Step7/Infrastructure7.fs" />
-    <Compile Include="Step7/Domain7.fs" />
-    <Compile Include="Step7/Application7.fs" />
-    <Compile Include="Step7/Tests7.fs" />
-    <Compile Include="Extensions/Seq.fs" />
-    <Compile Include="Step8/Infrastructure8.fs" />
-    <Compile Include="Step8/Domain8.fs" />
-    <Compile Include="Step8/Application8.fs" />
-    <Compile Include="Step8/Tests8.fs" />
-    <Compile Include="Step9/Infrastructure9.fs" />
-    <Compile Include="Step9/Domain9.fs" />
-    <Compile Include="Step9/Application9.fs" />
-    <Compile Include="Step9/Tests9.fs" />
-
     <Compile Include="Helper.fs" />
     <Compile Include="../UI/Menu.fs" />
     <Compile Include="Program.fs" />

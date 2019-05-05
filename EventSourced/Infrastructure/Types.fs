@@ -1,5 +1,4 @@
 namespace Infrastructure
-open System
 
 type EventSource = System.Guid
 
@@ -9,7 +8,7 @@ type EventProducer<'Event> =
 type EventMetadata =
   {
     Source : EventSource
-    RecordedAtUtc : DateTime
+    RecordedAtUtc : System.DateTime
   }
 
 type EventEnvelope<'Event> =
@@ -77,101 +76,4 @@ type CommandHandler<'Command> =
 type Behaviour<'Command,'Event> =
   'Command -> EventProducer<'Event>
 
-
 type DB_Connection_String = DB_Connection_String of string
-
-  (*
-    Event Storage -> Fehler zu EventStore. Wie damit umgehen? Wenn Exception dann? Ist selber MB, also dürfen wir hier auch nicht
-    verschlucken
-
-    Command Handler kaputt -> ich bin kaputt
-
-    EventHandler kaputt -> ich bin kaputt
-
-
-
-
-    TODO:
-      * Checken was passiert, wenn mit Agent passiert, wenn der einen Agent aufruft und hier eine Exception auftritt -> geht kaputt
-      * MBs abbrechen oder nicht bei Exception? -> nein
-      * Wie mit Results umgehen (serialize,deserialize), soll hier eine Exception geworfen werden oder nicht? -> nein
-      * Idee: Ich kann auf das OnError der EventStorage im EventStore hören -> eventStorage ist nicht mehr MB
-      * Idee: Result + Error Event für Exception -> erledigt
-      * Idee: EventStorage nicht als Agent -> erledigt
-
-      * Auf Query Result Async hören -> erledigt
-      * QueryHandler müssen ein Result zurückgeben -> erledigt
-      * QueryHandler nicht mehr Agent -> erledigt
-      * EventStorage Async -> erledigt
-      * EventStore Async -> erledigt
-      * Alles gibt ein Ergebnis zurück. Zum Beispiel auch Append
-      * Gedanken was muss Async sein, was blockend, was Agent
-      * Exceptions vs Results
-      * Error Messaging
-          -> wir bleiben bei dem Agent, da so dass system nicht stehen bleibt, bei einer Exception
-          -> wir bleiben erstmal bei einfacher Fehlerausgabe
-      * Subscribe: FromNow (z.B. Live Stream aller incoming events, elmish app), FromX (persistent readmodel), FromBeginning (memory readmodel)
-      * Persistent Readmodel (sold flavours über alle trucks)
-          speichere current state in db
-          beim Start: hole currentState aus DB
-          alles andere bleibt wie es ist
-
-          Alternative:
-          hole State bei jeder Query aus DB
-
-          Alternative:
-          nur schreiben, lesen geschieht im Query Handler <- habe dies gemacht
-
-
-      * Events als observable?
-          dann bräuchte man erstmal keine Position!
-
-
-      * nochmal Gedanken zu messaging (commandHandler ohne result oder mit?)
-      * tests
-
-      Motivation für Persistent Readmodels:
-      * Server Start
-      * Memory Consumption
-      * Another Service that should consume the Readmodel (should not be depending on server running)
-
-
-
-      könnten eventHandler fire and forget machen als mbp aber dann ist es nicht explizit, dass sie async sind
-
-
-
-    Danach: Domain nicht sehr komplex: Lets use the SafeConf Planner
-
-
-
-   ACHTUNG: Programm stürzt ab bei Commands
-
-
-   erwähnen:
-   man könnte correlations einfügen
-   event Position
-   position in stream
-   optimisti locking
-
-
-   wenn man die DB hat, braucht man eine Event Position zum abholen
-   erstmal ohne dann mit
-
-
-   eventposition braucht man, wenn man db eventstore hat
-
-
-
-   Todo:
-    Menu mit untermenüs
-    Storages in eigenen Ordner
-    Funktionen zum Erstellen der Tables
-
-
-  *)
-
-
-
-
-

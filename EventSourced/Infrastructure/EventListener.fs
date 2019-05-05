@@ -1,7 +1,5 @@
 namespace Infrastructure
 
-
-
 module EventListener =
   open Agent
 
@@ -39,6 +37,3 @@ module EventListener =
       Notify = Notify >> agent.Post
       Subscribe = Subscribe >> agent.Post
     }
-
-
-
