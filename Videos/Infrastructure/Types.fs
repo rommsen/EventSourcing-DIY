@@ -1,16 +1,16 @@
 namespace Infrastructure
 
-type Aggregate = System.Guid
+type EventSource = System.Guid
 
 type EventProducer<'Event> =
   'Event list -> 'Event list
 
 type EventStore<'Event> =
   {
-    Get : unit -> Map<Aggregate,'Event list>
-    GetStream : Aggregate -> 'Event list
-    Append : Aggregate -> 'Event list -> unit
-    Evolve : Aggregate -> EventProducer<'Event> -> unit
+    Get : unit -> Map<EventSource,'Event list>
+    GetStream : EventSource -> 'Event list
+    Append : EventSource -> 'Event list -> unit
+    Evolve : EventSource -> EventProducer<'Event> -> unit
   }
 
 type Projection<'State,'Event> =
