@@ -1,5 +1,7 @@
 namespace Domain
 
+type Truck = Truck of System.Guid
+
 type Flavour =
   | Vanilla
   | Strawberry
