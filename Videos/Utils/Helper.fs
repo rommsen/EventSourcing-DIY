@@ -29,3 +29,18 @@ let printTotalHistory history =
   history
   |> Map.fold (fun length _ events -> length + (events |> List.length)) 0
   |> printfn "Total History Length: %i"
+
+let printQueryResults header result =
+  result
+  |> runAsync
+  |> function
+    | Infrastructure.QueryResult.Handled result ->
+        printfn "\n%s: %A" header result
+
+    | Infrastructure.QueryResult.NotHandled ->
+        printfn "\n%s: NOT HANDLED" header
+
+    | Infrastructure.QueryResult.QueryError error ->
+        printError (sprintf "Query Error: %s" error) ""
+
+  waitForAnyKey()

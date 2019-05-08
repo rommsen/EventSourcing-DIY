@@ -4,9 +4,9 @@
     <TargetFramework>netcoreapp2.2</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="Utils/Helper.fs" />
     <Compile Include="../UI/Menu.fs" />
     <Compile Include="Infrastructure/Types.fs" />
+    <Compile Include="Utils/Helper.fs" />
     <Compile Include="Infrastructure/EventStore.fs" />
     <Compile Include="Infrastructure/QueryHandler.fs" />
     <Compile Include="Domain.fs" />

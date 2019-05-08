@@ -6,7 +6,10 @@ module API =
 
   type Query =
     | FlavourInStockOfTruck of Truck * Flavour
+    | FlavourInStockOfAll of Flavour
     | FlavoursSoldOfTruck of Truck * Flavour
+    | FlavoursSoldOfAll of Flavour
+
 
 
 module QueryHandlers =

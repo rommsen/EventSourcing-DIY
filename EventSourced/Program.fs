@@ -96,18 +96,18 @@ let main _ =
 
   let queries =
     [
-      ("FlavourInStockOfTruck (truck1, Vanilla)", fun () -> FlavourInStockOfTruck (truck1, Vanilla) |> app.HandleQuery |> runAsync |> printQueryResults "Stock Truck 1 Vanilla")
-      ("FlavourInStockOfTruck (truck2, Vanilla)", fun () -> FlavourInStockOfTruck (truck2, Vanilla) |> app.HandleQuery |> runAsync |> printQueryResults "Stock Truck 2 Vanilla")
-      ("FlavourInStockOfTruck (truck1, Strawberry)", fun () -> FlavourInStockOfTruck (truck1, Strawberry) |> app.HandleQuery |> runAsync |> printQueryResults "Stock Truck 1 Strawberry")
-      ("FlavourInStockOfTruck (truck2, Strawberry)", fun () -> FlavourInStockOfTruck (truck2, Strawberry) |> app.HandleQuery |> runAsync |> printQueryResults "Stock Truck 2 Strawberry")
-      ("FlavourInStockOfAll Strawberry", fun () -> FlavourInStockOfAll Strawberry |> app.HandleQuery |> runAsync |> printQueryResults "Total Stock Strawberry")
-      ("FlavourInStockOfAll Vanilla", fun () -> FlavourInStockOfAll Vanilla |> app.HandleQuery |> runAsync |> printQueryResults "Total Stock Vanilla")
-      ("FlavoursSoldOfTruck (truck1, Vanilla)", fun () -> FlavoursSoldOfTruck (truck1, Vanilla) |> app.HandleQuery |> runAsync |> printQueryResults "Sold Truck 1 Vanilla")
-      ("FlavoursSoldOfTruck (truck2, Vanilla)", fun () -> FlavoursSoldOfTruck (truck2, Vanilla) |> app.HandleQuery |> runAsync |> printQueryResults "Sold Truck 2 Vanilla")
-      ("FlavoursSoldOfTruck (truck1, Strawberry)", fun () -> FlavoursSoldOfTruck (truck1, Strawberry) |> app.HandleQuery |> runAsync |> printQueryResults "Sold Truck 1 Strawberry")
-      ("FlavoursSoldOfTruck (truck2, Strawberry)", fun () -> FlavoursSoldOfTruck (truck2, Strawberry) |> app.HandleQuery |> runAsync |> printQueryResults "Sold Truck 2 Strawberry")
-      ("FlavoursSoldOfAll Strawberry", fun () -> FlavoursSoldOfAll Strawberry |> app.HandleQuery |> runAsync |> printQueryResults "Total Sold Strawberry")
-      ("FlavoursSoldOfAll Vanilla", fun () -> FlavoursSoldOfAll Vanilla |> app.HandleQuery |> runAsync |> printQueryResults "Total Sold Vanilla")
+      ("FlavourInStockOfTruck (truck1, Vanilla)", fun () -> FlavourInStockOfTruck (truck1, Vanilla) |> app.HandleQuery |> printQueryResults "Stock Truck 1 Vanilla")
+      ("FlavourInStockOfTruck (truck2, Vanilla)", fun () -> FlavourInStockOfTruck (truck2, Vanilla) |> app.HandleQuery |> printQueryResults "Stock Truck 2 Vanilla")
+      ("FlavourInStockOfTruck (truck1, Strawberry)", fun () -> FlavourInStockOfTruck (truck1, Strawberry) |> app.HandleQuery |> printQueryResults "Stock Truck 1 Strawberry")
+      ("FlavourInStockOfTruck (truck2, Strawberry)", fun () -> FlavourInStockOfTruck (truck2, Strawberry) |> app.HandleQuery |> printQueryResults "Stock Truck 2 Strawberry")
+      ("FlavourInStockOfAll Strawberry", fun () -> FlavourInStockOfAll Strawberry |> app.HandleQuery |> printQueryResults "Total Stock Strawberry")
+      ("FlavourInStockOfAll Vanilla", fun () -> FlavourInStockOfAll Vanilla |> app.HandleQuery |> printQueryResults "Total Stock Vanilla")
+      ("FlavoursSoldOfTruck (truck1, Vanilla)", fun () -> FlavoursSoldOfTruck (truck1, Vanilla) |> app.HandleQuery |> printQueryResults "Sold Truck 1 Vanilla")
+      ("FlavoursSoldOfTruck (truck2, Vanilla)", fun () -> FlavoursSoldOfTruck (truck2, Vanilla) |> app.HandleQuery |> printQueryResults "Sold Truck 2 Vanilla")
+      ("FlavoursSoldOfTruck (truck1, Strawberry)", fun () -> FlavoursSoldOfTruck (truck1, Strawberry) |> app.HandleQuery |> printQueryResults "Sold Truck 1 Strawberry")
+      ("FlavoursSoldOfTruck (truck2, Strawberry)", fun () -> FlavoursSoldOfTruck (truck2, Strawberry) |> app.HandleQuery |> printQueryResults "Sold Truck 2 Strawberry")
+      ("FlavoursSoldOfAll Strawberry", fun () -> FlavoursSoldOfAll Strawberry |> app.HandleQuery |> printQueryResults "Total Sold Strawberry")
+      ("FlavoursSoldOfAll Vanilla", fun () -> FlavoursSoldOfAll Vanilla |> app.HandleQuery |> printQueryResults "Total Sold Vanilla")
     ], ignore
 
   let main =

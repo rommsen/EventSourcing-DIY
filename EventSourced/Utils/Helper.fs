@@ -28,16 +28,21 @@ module Helper
 
     waitForAnyKey()
 
+  let runAsync asnc =
+    asnc |> Async.RunSynchronously
+
   let printQueryResults header result =
-    match result with
-    | Infrastructure.QueryResult.Handled result ->
-        printfn "\n%s: %A" header result
+    result
+    |> runAsync
+    |> function
+      | Infrastructure.QueryResult.Handled result ->
+          printfn "\n%s: %A" header result
 
-    | Infrastructure.QueryResult.NotHandled ->
-        printfn "\n%s: NOT HANDLED" header
+      | Infrastructure.QueryResult.NotHandled ->
+          printfn "\n%s: NOT HANDLED" header
 
-    | Infrastructure.QueryResult.QueryError error ->
-        printError (sprintf "Query Error: %s" error) ""
+      | Infrastructure.QueryResult.QueryError error ->
+          printError (sprintf "Query Error: %s" error) ""
 
     waitForAnyKey()
 
@@ -51,9 +56,6 @@ module Helper
         printError (sprintf "Command Error: %s" error) ""
 
     waitForAnyKey()
-
-  let runAsync asnc =
-    asnc |> Async.RunSynchronously
 
 
   type OptionBuilder() =

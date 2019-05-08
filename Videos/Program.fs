@@ -3,6 +3,8 @@ open Domain
 open Projections
 open Helper
 open Expecto
+open Application
+open API
 
 let printSoldFlavour flavour state =
   state
@@ -14,13 +16,24 @@ let printStockOf flavour state =
   |> stockOf flavour
   |> printfn "Stock of %A: %i" flavour
 
-let truck1 = System.Guid.Parse "49d9d107-aceb-4b2d-a7e3-eca784a9de6e"
-let truck2 = System.Guid.Parse "8b916bde-6bdf-43cc-b43b-69c9f4c3e5c4"
+let guid (Truck guid) = guid
+
+let truck1 = Truck <| System.Guid.Parse "49d9d107-aceb-4b2d-a7e3-eca784a9de6e"
+let truck2 = Truck <| System.Guid.Parse "8b916bde-6bdf-43cc-b43b-69c9f4c3e5c4"
+
+let truck1_guid = guid truck1
+let truck2_guid = guid truck2
 
 [<EntryPoint>]
 let main _ =
 
   let eventStore : EventStore<Event> = EventStore.initialize()
+
+  let queryHandler =
+    QueryHandler.initialize
+      [
+        Application.QueryHandlers.flavours eventStore
+      ]
 
   let utils =
     [
@@ -31,32 +44,36 @@ let main _ =
   let history =
     [
       ("Total History", fun () -> eventStore.Get() |> printTotalHistory ; waitForAnyKey())
-      ("History Truck 1", fun () -> eventStore.GetStream truck1 |> printEvents "Truck 1" ; waitForAnyKey())
-      ("History Truck 2", fun () -> eventStore.GetStream truck2  |> printEvents "Truck 2"  ; waitForAnyKey())
+      ("History Truck 1", fun () -> eventStore.GetStream truck1_guid |> printEvents "Truck 1" ; waitForAnyKey())
+      ("History Truck 2", fun () -> eventStore.GetStream truck2_guid  |> printEvents "Truck 2"  ; waitForAnyKey())
     ], ignore
 
   let behaviour =
     [
-      ("Sell_flavour (truck1, Vanilla)", fun () -> eventStore.Evolve truck1 (Behaviour.sellFlavour Vanilla) ; waitForAnyKey())
-      ("Sell_flavour (truck2, Vanilla)", fun () -> eventStore.Evolve truck2 (Behaviour.sellFlavour Vanilla) ; waitForAnyKey())
-      ("Sell_flavour (truck1, Strawberry)", fun () -> eventStore.Evolve truck1 (Behaviour.sellFlavour Strawberry) ; waitForAnyKey())
-      ("Sell_flavour (truck2, Strawberry)", fun () -> eventStore.Evolve truck2 (Behaviour.sellFlavour Strawberry) ; waitForAnyKey())
-      ("Restock_flavour (truck1, Vanilla, 5)", fun () -> eventStore.Evolve truck1 (Behaviour.restock Vanilla 5))
-      ("Restock_flavour (truck2, Vanilla, 5)", fun () -> eventStore.Evolve truck2 (Behaviour.restock Vanilla 5))
-      ("Restock_flavour (truck1, Strawberry, 5)", fun () -> eventStore.Evolve truck1 (Behaviour.restock Strawberry 5))
-      ("Restock_flavour (truck2, Strawberry, 5)", fun () -> eventStore.Evolve truck2 (Behaviour.restock Strawberry 5))
+      ("Sell_flavour (truck1, Vanilla)", fun () -> eventStore.Evolve truck1_guid (Behaviour.sellFlavour Vanilla) ; waitForAnyKey())
+      ("Sell_flavour (truck2, Vanilla)", fun () -> eventStore.Evolve truck2_guid (Behaviour.sellFlavour Vanilla) ; waitForAnyKey())
+      ("Sell_flavour (truck1, Strawberry)", fun () -> eventStore.Evolve truck1_guid (Behaviour.sellFlavour Strawberry) ; waitForAnyKey())
+      ("Sell_flavour (truck2, Strawberry)", fun () -> eventStore.Evolve truck2_guid (Behaviour.sellFlavour Strawberry) ; waitForAnyKey())
+      ("Restock_flavour (truck1, Vanilla, 5)", fun () -> eventStore.Evolve truck1_guid (Behaviour.restock Vanilla 5))
+      ("Restock_flavour (truck2, Vanilla, 5)", fun () -> eventStore.Evolve truck2_guid (Behaviour.restock Vanilla 5))
+      ("Restock_flavour (truck1, Strawberry, 5)", fun () -> eventStore.Evolve truck1_guid (Behaviour.restock Strawberry 5))
+      ("Restock_flavour (truck2, Strawberry, 5)", fun () -> eventStore.Evolve truck2_guid (Behaviour.restock Strawberry 5))
     ], ignore
 
   let queries =
     [
-      ("FlavourInStockOfTruck (truck1, Vanilla)", fun () -> eventStore.GetStream truck1 |> project flavoursInStock |> printStockOf Vanilla ; waitForAnyKey())
-      ("FlavourInStockOfTruck (truck2, Vanilla)", fun () -> eventStore.GetStream truck2 |> project flavoursInStock |> printStockOf Vanilla ; waitForAnyKey())
-      ("FlavourInStockOfTruck (truck1, Strawberry)", fun () -> eventStore.GetStream truck1 |> project flavoursInStock |> printStockOf Strawberry ; waitForAnyKey())
-      ("FlavourInStockOfTruck (truck2, Strawberry)", fun () -> eventStore.GetStream truck2 |> project flavoursInStock |> printStockOf Strawberry ; waitForAnyKey())
-      ("FlavoursSoldOfTruck (truck1, Vanilla)", fun () -> eventStore.GetStream truck1 |> project soldFlavours |> printStockOf Vanilla ; waitForAnyKey())
-      ("FlavoursSoldOfTruck (truck2, Vanilla)", fun () -> eventStore.GetStream truck2 |> project soldFlavours |> printStockOf Vanilla ; waitForAnyKey())
-      ("FlavoursSoldOfTruck (truck1, Strawberry)", fun () -> eventStore.GetStream truck1 |> project soldFlavours |> printStockOf Strawberry ; waitForAnyKey())
-      ("FlavoursSoldOfTruck (truck2, Strawberry)", fun () -> eventStore.GetStream truck2 |> project soldFlavours |> printStockOf Strawberry ; waitForAnyKey())
+      ("FlavourInStockOfTruck (truck1, Vanilla)", fun () -> FlavourInStockOfTruck (truck1, Vanilla) |> queryHandler.Handle |> printQueryResults "Stock Truck 1 Vanilla")
+      ("FlavourInStockOfTruck (truck2, Vanilla)", fun () -> FlavourInStockOfTruck (truck2, Vanilla) |> queryHandler.Handle |> printQueryResults "Stock Truck 2 Vanilla")
+      ("FlavourInStockOfTruck (truck1, Strawberry)", fun () -> FlavourInStockOfTruck (truck1, Strawberry) |> queryHandler.Handle |> printQueryResults "Stock Truck 1 Strawberry")
+      ("FlavourInStockOfTruck (truck2, Strawberry)", fun () -> FlavourInStockOfTruck (truck2, Strawberry) |> queryHandler.Handle |> printQueryResults "Stock Truck 2 Strawberry")
+      ("FlavourInStockOfAll Strawberry", fun () -> FlavourInStockOfAll Strawberry |> queryHandler.Handle |> printQueryResults "Total Stock Strawberry")
+      ("FlavourInStockOfAll Vanilla", fun () -> FlavourInStockOfAll Vanilla |> queryHandler.Handle |> printQueryResults "Total Stock Vanilla")
+      ("FlavoursSoldOfTruck (truck1, Vanilla)", fun () -> FlavoursSoldOfTruck (truck1, Vanilla) |> queryHandler.Handle |> printQueryResults "Sold Truck 1 Vanilla")
+      ("FlavoursSoldOfTruck (truck2, Vanilla)", fun () -> FlavoursSoldOfTruck (truck2, Vanilla) |> queryHandler.Handle |> printQueryResults "Sold Truck 2 Vanilla")
+      ("FlavoursSoldOfTruck (truck1, Strawberry)", fun () -> FlavoursSoldOfTruck (truck1, Strawberry) |> queryHandler.Handle |> printQueryResults "Sold Truck 1 Strawberry")
+      ("FlavoursSoldOfTruck (truck2, Strawberry)", fun () -> FlavoursSoldOfTruck (truck2, Strawberry) |> queryHandler.Handle |> printQueryResults "Sold Truck 2 Strawberry")
+      ("FlavoursSoldOfAll Strawberry", fun () -> FlavoursSoldOfAll Strawberry |> queryHandler.Handle |> printQueryResults "Total Sold Strawberry")
+      ("FlavoursSoldOfAll Vanilla", fun () -> FlavoursSoldOfAll Vanilla |> queryHandler.Handle |> printQueryResults "Total Sold Vanilla")
     ], ignore
 
   let main =
