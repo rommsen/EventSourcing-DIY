@@ -18,3 +18,13 @@ type Projection<'State,'Event> =
     Init : 'State
     Update : 'State -> 'Event -> 'State
   }
+
+type QueryResult =
+  | Handled of obj
+  | NotHandled
+  | QueryError of string
+
+type  QueryHandler<'Query> =
+  {
+    Handle : 'Query -> Async<QueryResult>
+  }

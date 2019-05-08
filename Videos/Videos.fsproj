@@ -8,7 +8,9 @@
     <Compile Include="../UI/Menu.fs" />
     <Compile Include="Infrastructure/Types.fs" />
     <Compile Include="Infrastructure/EventStore.fs" />
+    <Compile Include="Infrastructure/QueryHandler.fs" />
     <Compile Include="Domain.fs" />
+    <Compile Include="Application.fs" />
     <Compile Include="Tests.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
