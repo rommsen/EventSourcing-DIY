@@ -15,7 +15,7 @@ module Menu =
     executionTable
     |> Seq.iteri (fun index (name:string,_) ->
         if index = selected then
-          Console.ForegroundColor <- ConsoleColor.White
+          Console.ForegroundColor <- ConsoleColor.Yellow
           Console.BackgroundColor <- ConsoleColor.DarkBlue
 
         Console.WriteLine (sprintf " %i. %s" (index + 1) name)

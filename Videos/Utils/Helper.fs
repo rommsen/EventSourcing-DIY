@@ -16,6 +16,7 @@ let runAsync asnc =
   asnc |> Async.RunSynchronously
 
 let waitForAnyKey () =
+  Console.WriteLine "\n\nPress any key to continue.\n\n"
   Console.ReadKey() |> ignore
 
 let printEvents header events =
