@@ -5,3 +5,4 @@ packages
 .idea
 .paket/load
 Videos/store.txt
+.ionide
