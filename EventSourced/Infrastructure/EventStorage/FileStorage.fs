@@ -7,30 +7,42 @@ module FileStorage =
   open Thoth.Json.Net
 
   let private get store =
-    store
-    |> File.ReadLines
-    |> List.ofSeq
-    |> List.traverseResult Decode.Auto.fromString<EventEnvelope<'Event>>
+    async {
+      let! lines = store |> File.ReadAllLinesAsync |> Async.AwaitTask
+
+      return
+        lines
+        |> List.ofSeq
+        |> List.traverseResult Decode.Auto.fromString<EventEnvelope<'Event>>
+    }
 
   let private getStream store source =
-    store
-    |> File.ReadLines
-    |> List.ofSeq
-    |> List.traverseResult Decode.Auto.fromString<EventEnvelope<'Event>>
-    |> Result.map (List.filter (fun ee -> ee.Metadata.Source = source))
+    async {
+      let! lines = store |> File.ReadAllLinesAsync |> Async.AwaitTask
+
+      return
+        lines
+        |> List.ofSeq
+        |> List.traverseResult Decode.Auto.fromString<EventEnvelope<'Event>>
+        |> Result.map (List.filter (fun ee -> ee.Metadata.Source = source))
+    }
 
   let private append store events =
-    use streamWriter = new StreamWriter(store, true)
-    events
-    |> List.map (fun eventEnvelope -> Encode.Auto.toString(0,eventEnvelope))
-    |> List.iter streamWriter.WriteLine
+    async {
+      use streamWriter = new StreamWriter(store, true)
+      let json =
+        events
+        |> List.map (fun eventEnvelope -> Encode.Auto.toString(0,eventEnvelope))
+        |> String.concat System.Environment.NewLine
 
-    do streamWriter.Flush()
+      do! streamWriter.WriteLineAsync json |> Async.AwaitTask
+      do! streamWriter.FlushAsync() |> Async.AwaitTask
+    }
 
 
   let initialize store : EventStorage<_> =
     {
-      Get = fun () -> async { return get store }
-      GetStream = fun eventSource -> async { return getStream store eventSource  }
-      Append = fun events -> async { return append store events }
+      Get = fun () -> get store
+      GetStream = fun eventSource -> getStream store eventSource
+      Append = fun events -> append store events
     }
