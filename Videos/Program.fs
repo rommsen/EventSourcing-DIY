@@ -27,7 +27,8 @@ let truck2_guid = guid truck2
 [<EntryPoint>]
 let main _ =
 
-  let eventStorage = EventStorage.InMemoryStorage.initialize()
+  // let eventStorage = EventStorage.InMemoryStorage.initialize()
+  let eventStorage = EventStorage.FileStorage.initialize @"./store.txt"
   let eventStore : EventStore<Event> = EventStore.initialize eventStorage
 
   let queryHandler =
@@ -45,9 +46,9 @@ let main _ =
   let history =
     [
 
-      ("Total History", fun () -> eventStore.Get() |> runAsync |> printEvents "all" ; waitForAnyKey())
-      ("History Truck 1", fun () -> eventStore.GetStream truck1_guid |> runAsync |> printEvents "Truck 1" ; waitForAnyKey())
-      ("History Truck 2", fun () -> eventStore.GetStream truck2_guid |> runAsync |> printEvents "Truck 2"  ; waitForAnyKey())
+      ("Total History", fun () -> eventStore.Get() |> runAsync |> printEvents "all")
+      ("History Truck 1", fun () -> eventStore.GetStream truck1_guid |> runAsync |> printEvents "Truck 1")
+      ("History Truck 2", fun () -> eventStore.GetStream truck2_guid |> runAsync |> printEvents "Truck 2")
     ], ignore
 
   let behaviour =

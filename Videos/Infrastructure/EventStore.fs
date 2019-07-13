@@ -28,37 +28,50 @@ module EventStore =
         async {
           match! inbox.Receive() with
           | Get reply ->
-              let! events = storage.Get()
-              do events |> reply.Reply
+              try
+                let! events = storage.Get()
+                do events |> reply.Reply
+              with exn ->
+                do exn.Message |> Error |> reply.Reply
 
               return! loop ()
 
           | GetStream (source,reply) ->
-              let! stream = source |> storage.GetStream
-              do stream |> reply.Reply
+              try
+                let! stream = source |> storage.GetStream
+                do stream |> reply.Reply
+              with exn ->
+                do exn.Message |> Error |> reply.Reply
 
               return! loop ()
 
           | Append (events,reply) ->
-              do! events |> storage.Append
-              do reply.Reply (Ok ())
+              try
+                do! events |> storage.Append
+                do reply.Reply (Ok ())
+              with exn ->
+                do exn.Message |> Error |> reply.Reply
 
               return! loop ()
 
           | Evolve (source,producer,reply) ->
-              match! source |> storage.GetStream with
-              | Ok stream ->
-                  let events =
-                    stream
-                    |> List.map (fun envelope -> envelope.Event)
-                    |> producer
+              try
+                match! source |> storage.GetStream with
+                | Ok stream ->
+                    let events =
+                      stream
+                      |> List.map (fun envelope -> envelope.Event)
+                      |> producer
 
-                  do! events |> enveloped source |> storage.Append
+                    do! events |> enveloped source |> storage.Append
 
-                  do reply.Reply (Ok ())
+                    do reply.Reply (Ok ())
 
-              | Error error ->
-                  do reply.Reply (Error error)
+                | Error error ->
+                    do reply.Reply (Error error)
+
+              with exn ->
+                do exn.Message |> Error |> reply.Reply
 
               return! loop () // TODO try/with
         }
