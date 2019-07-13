@@ -1,79 +1,75 @@
 namespace Infrastructure
 
 module EventStore =
+
   type Msg<'Event> =
-  | Get of AsyncReplyChannel<Map<EventSource,'Event list>>
-  | GetStream of EventSource * AsyncReplyChannel<'Event list>
-  | Append of  EventSource * 'Event list
-  | Evolve of EventSource * EventProducer<'Event>
+    | Get of AsyncReplyChannel<EventResult<'Event>>
+    | GetStream of EventSource * AsyncReplyChannel<EventResult<'Event>>
+    | Append of EventEnvelope<'Event> list * AsyncReplyChannel<Result<unit,string>>
+    | Evolve of EventSource * EventProducer<'Event> *AsyncReplyChannel<Result<unit,string>>
 
-  let initialize () : EventStore<'Event> =
-    let history : Map<EventSource,'Event> = Map.empty
-
-    let mailbox =
-      MailboxProcessor.Start(fun inbox ->
-        let rec loop history =
-          async {
-            let! msg = inbox.Receive()
-
-            match msg with
-            | Get reply ->
-                reply.Reply history
-                return! loop history
-
-            | GetStream (eventSource,reply) ->
-                history
-                |> Map.tryFind eventSource
-                |> Option.defaultValue []
-                |> reply.Reply
-
-                return! loop history
-
-            | Append (eventSource,events)  ->
-                let stream_history =
-                  history
-                  |> Map.tryFind eventSource
-                  |> Option.defaultValue []
-
-                return! loop (
-                    history
-                    |> Map.add eventSource (stream_history @ events))
-
-            | Evolve (eventSource,producer) ->
-                let stream_history =
-                  history
-                  |> Map.tryFind eventSource
-                  |> Option.defaultValue []
-
-                let events =
-                  stream_history
-                  |> producer
-
-                return! loop (
-                    history
-                    |> Map.add eventSource (stream_history @ events)
-                )
+  let private enveloped source events =
+    let now = System.DateTime.UtcNow
+    let envelope event =
+      {
+          Metadata = {
+            Source = source
+            RecordedAtUtc = now
           }
+          Event = event
+      }
 
-        loop history
-      )
+    events |> List.map envelope
 
-    let getStream eventSource =
-      mailbox.PostAndReply (fun reply -> (eventSource,reply) |> GetStream)
+  let initialize (storage : EventStorage<_>) : EventStore<_> =
 
-    let append eventSource events =
-      (eventSource,events)
-      |> Append
-      |> mailbox.Post
+    let proc (inbox : MailboxProcessor<Msg<_>>) =
+      let rec loop () =
+        async {
+          match! inbox.Receive() with
+          | Get reply ->
+              let! events = storage.Get()
+              do events |> reply.Reply
 
-    let evolve eventSource producer =
-      (eventSource,producer)
-      |> Evolve
-      |> mailbox.Post
+              return! loop ()
+
+          | GetStream (source,reply) ->
+              let! stream = source |> storage.GetStream
+              do stream |> reply.Reply
+
+              return! loop ()
+
+          | Append (events,reply) ->
+              do! events |> storage.Append
+              do reply.Reply (Ok ())
+
+              return! loop ()
+
+          | Evolve (source,producer,reply) ->
+              match! source |> storage.GetStream with
+              | Ok stream ->
+                  let events =
+                    stream
+                    |> List.map (fun envelope -> envelope.Event)
+                    |> producer
+
+                  do! events |> enveloped source |> storage.Append
+
+                  do reply.Reply (Ok ())
+
+              | Error error ->
+                  do reply.Reply (Error error)
+
+              return! loop () // TODO try/with
+        }
+
+      loop ()
+
+    let agent =  MailboxProcessor<Msg<_>>.Start(proc)
 
     {
-      Get = fun () ->  mailbox.PostAndReply Get
-      GetStream = getStream
-      Append = append
-      Evolve = evolve
+      Get = fun () -> agent.PostAndAsyncReply Get
+      GetStream = fun eventSource -> agent.PostAndAsyncReply (fun reply -> GetStream (eventSource,reply))
+      Append = fun events -> agent.PostAndAsyncReply (fun reply -> Append (events,reply))
+      Evolve = fun eventSource producer -> agent.PostAndAsyncReply (fun reply -> Evolve (eventSource,producer,reply))
     }

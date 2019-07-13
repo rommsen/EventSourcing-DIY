@@ -6,10 +6,10 @@
   <ItemGroup>
     <Compile Include="../UI/Menu.fs" />
     <Compile Include="Infrastructure/Types.fs" />
-    <Compile Include="Utils/Helper.fs" />
     <Compile Include="Infrastructure/EventStorage/InMemoryStorage.fs" />
     <Compile Include="Infrastructure/EventStore.fs" />
     <Compile Include="Infrastructure/QueryHandler.fs" />
+    <Compile Include="Utils/Helper.fs" />
     <Compile Include="Domain.fs" />
     <Compile Include="Application.fs" />
     <Compile Include="Tests.fs" />

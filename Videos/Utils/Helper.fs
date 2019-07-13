@@ -20,11 +20,17 @@ let waitForAnyKey () =
   Console.ReadKey() |> ignore
 
 let printEvents header events =
-  events
-  |> List.length
-  |> printfn "History for %s (Length: %i)" header
+  match events with
+  | Ok events ->
+      events
+      |> List.length
+      |> printfn "\nHistory for %s (Length: %i)" header
 
-  events |> printUl
+      events |> printUl
+
+  | Error error -> printError (sprintf "Error when retrieving events: %s" error) ""
+
+  waitForAnyKey()
 
 let printTotalHistory history =
   history

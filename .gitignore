@@ -6,3 +6,4 @@ packages
 .paket/load
 Videos/store.txt
 .ionide
+.fake

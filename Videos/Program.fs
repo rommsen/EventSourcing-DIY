@@ -27,12 +27,13 @@ let truck2_guid = guid truck2
 [<EntryPoint>]
 let main _ =
 
-  let eventStore : EventStore<Event> = EventStore.initialize()
+  let eventStorage = EventStorage.InMemoryStorage.initialize()
+  let eventStore : EventStore<Event> = EventStore.initialize eventStorage
 
   let queryHandler =
     QueryHandler.initialize
       [
-        Application.QueryHandlers.flavours eventStore
+        QueryHandlers.flavours eventStore
       ]
 
   let utils =
@@ -43,21 +44,22 @@ let main _ =
 
   let history =
     [
-      ("Total History", fun () -> eventStore.Get() |> printTotalHistory ; waitForAnyKey())
-      ("History Truck 1", fun () -> eventStore.GetStream truck1_guid |> printEvents "Truck 1" ; waitForAnyKey())
-      ("History Truck 2", fun () -> eventStore.GetStream truck2_guid  |> printEvents "Truck 2"  ; waitForAnyKey())
+
+      ("Total History", fun () -> eventStore.Get() |> runAsync |> printEvents "all" ; waitForAnyKey())
+      ("History Truck 1", fun () -> eventStore.GetStream truck1_guid |> runAsync |> printEvents "Truck 1" ; waitForAnyKey())
+      ("History Truck 2", fun () -> eventStore.GetStream truck2_guid |> runAsync |> printEvents "Truck 2"  ; waitForAnyKey())
     ], ignore
 
   let behaviour =
     [
-      ("Sell_flavour (truck1, Vanilla)", fun () -> eventStore.Evolve truck1_guid (Behaviour.sellFlavour Vanilla) ; waitForAnyKey())
-      ("Sell_flavour (truck2, Vanilla)", fun () -> eventStore.Evolve truck2_guid (Behaviour.sellFlavour Vanilla) ; waitForAnyKey())
-      ("Sell_flavour (truck1, Strawberry)", fun () -> eventStore.Evolve truck1_guid (Behaviour.sellFlavour Strawberry) ; waitForAnyKey())
-      ("Sell_flavour (truck2, Strawberry)", fun () -> eventStore.Evolve truck2_guid (Behaviour.sellFlavour Strawberry) ; waitForAnyKey())
-      ("Restock_flavour (truck1, Vanilla, 5)", fun () -> eventStore.Evolve truck1_guid (Behaviour.restock Vanilla 5))
-      ("Restock_flavour (truck2, Vanilla, 5)", fun () -> eventStore.Evolve truck2_guid (Behaviour.restock Vanilla 5))
-      ("Restock_flavour (truck1, Strawberry, 5)", fun () -> eventStore.Evolve truck1_guid (Behaviour.restock Strawberry 5))
-      ("Restock_flavour (truck2, Strawberry, 5)", fun () -> eventStore.Evolve truck2_guid (Behaviour.restock Strawberry 5))
+      ("Sell_flavour (truck1, Vanilla)", fun () -> eventStore.Evolve truck1_guid (Behaviour.sellFlavour Vanilla) |> runAsync |> ignore ; waitForAnyKey())
+      ("Sell_flavour (truck2, Vanilla)", fun () -> eventStore.Evolve truck2_guid (Behaviour.sellFlavour Vanilla) |> runAsync |> ignore; waitForAnyKey())
+      ("Sell_flavour (truck1, Strawberry)", fun () -> eventStore.Evolve truck1_guid (Behaviour.sellFlavour Strawberry) |> runAsync |> ignore; waitForAnyKey())
+      ("Sell_flavour (truck2, Strawberry)", fun () -> eventStore.Evolve truck2_guid (Behaviour.sellFlavour Strawberry) |> runAsync |> ignore; waitForAnyKey())
+      ("Restock_flavour (truck1, Vanilla, 5)", fun () -> eventStore.Evolve truck1_guid (Behaviour.restock Vanilla 5) |> runAsync |> ignore; waitForAnyKey())
+      ("Restock_flavour (truck2, Vanilla, 5)", fun () -> eventStore.Evolve truck2_guid (Behaviour.restock Vanilla 5) |> runAsync |> ignore; waitForAnyKey())
+      ("Restock_flavour (truck1, Strawberry, 5)", fun () -> eventStore.Evolve truck1_guid (Behaviour.restock Strawberry 5) |> runAsync |> ignore; waitForAnyKey())
+      ("Restock_flavour (truck2, Strawberry, 5)", fun () -> eventStore.Evolve truck2_guid (Behaviour.restock Strawberry 5) |> runAsync |> ignore; waitForAnyKey())
     ], ignore
 
   let queries =
